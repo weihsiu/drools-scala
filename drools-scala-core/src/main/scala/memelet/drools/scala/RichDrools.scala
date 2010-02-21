@@ -11,8 +11,8 @@ import org.drools.event.rule._
 import org.drools.runtime.rule.FactHandle
 import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
-import org.drools.conf.{KnowledgeBaseOption, SequentialOption, SequentialAgendaOption, EventProcessingOption}
-import org.joda.time.{Duration, Period, DateTime, DateTimeUtils}
+import org.drools.conf.{KnowledgeBaseOption}
+import org.joda.time.{Period, DateTime, DateTimeUtils}
 
 object DroolsBuilder {
 

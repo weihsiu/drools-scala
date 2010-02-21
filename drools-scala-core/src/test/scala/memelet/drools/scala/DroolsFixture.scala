@@ -39,6 +39,13 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
 
   setup(session)
 
+  def debugWorkingMemory() = DroolsDebug.debugWorkingMemory(session)
+  def debugAgenda() = DroolsDebug.debugAgenda(session: StatefulKnowledgeSession)
+
+}
+
+object DroolsDebug {
+  
   def debugWorkingMemory(session: StatefulKnowledgeSession) {
     session addEventListener new WorkingMemoryEventListener {
       def objectInserted(e: ObjectInsertedEvent) = println("on-insert (%s)".format(e.getObject.toString))
