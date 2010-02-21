@@ -1,0 +1,17 @@
+package memelet.drools.scala.evaluators
+
+import memelet.drools.scala.evaluators.EnumerationValueEvaluatorDefinitionSpec.Fact
+
+rule "is_named E1" dialect "mvel"
+when
+  f1: Fact(value is_named "E1")
+then
+  System.out.println("*** == f1=" + f1)
+end
+
+rule "not is_named E1" dialect "mvel"
+when
+  f1: Fact(value not is_named "E1")
+then
+  System.out.println("*** != f1=" + f1)
+end

@@ -1,0 +1,8 @@
+target
+out
+_gsdata_
+.idea
+*.iws
+*.ipr
+*.iml
+*.log
