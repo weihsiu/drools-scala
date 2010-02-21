@@ -2,10 +2,8 @@ package memelet.drools.scala
 
 import java.util.concurrent.TimeUnit
 import org.joda.time.{Period, DateTime, DateTimeUtils}
-import org.drools.time.{TimerService, SessionPseudoClock}
+import org.drools.time.TimerService
 import org.drools.time.impl.PseudoClockScheduler
-
-// TODO Move to a common projects
 
 object CompositeClock {
   implicit def toTimerService(ic: CompositeClock): TimerService = ic.droolsClock

@@ -8,13 +8,13 @@ class EnumerationValueEvaluatorDefinitionSpec extends SpecsMatchers {
 
   import RichDrools._
 
-  object EnumType extends Enumeration {
+  object FactValue extends Enumeration {
     val E1 = Value("E1")
     val E2 = Value("E2")
   }
-  import EnumType._
+  import FactValue._
 
-  case class Fact(value: EnumType.Value)
+  case class Fact(value: FactValue.Value)
 
   val drools = DroolsFixture(rules = Seq("memelet/drools/scala/evaluators/enum_evaluator.drl"))
   import drools._

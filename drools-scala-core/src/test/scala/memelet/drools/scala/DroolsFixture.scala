@@ -9,8 +9,6 @@ object DroolsFixture {
 
   import RichDrools._
 
-//  def apply(rules: Seq[String])(setup: StatefulKnowledgeSession => Unit) = new DroolsFixture(rules, setup)
-
   def apply(rules: Seq[String], globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty) = new DroolsFixture(rules, (session: StatefulKnowledgeSession) => {
     globals.foreach(global => session addGlobal (global._1, global._2))
     facts.foreach(fact => session insert fact)

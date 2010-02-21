@@ -12,8 +12,7 @@ import org.drools.runtime.rule.FactHandle
 import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
 import org.drools.conf.{KnowledgeBaseOption, SequentialOption, SequentialAgendaOption, EventProcessingOption}
-import org.joda.time.{Period, DateTime, DateTimeUtils}
-// TODO Move to a common projects
+import org.joda.time.{Duration, Period, DateTime, DateTimeUtils}
 
 object DroolsBuilder {
 
@@ -29,7 +28,6 @@ object DroolsBuilder {
     kbuilder.getKnowledgePackages
   }
 
-//  def buildKnowledgeBase(): RichKnowledgeBase = buildKnowledgeBase(List.empty, List.empty)
   def buildKnowledgeBase(kbaseOptions: KnowledgeBaseOption*): RichKnowledgeBase = buildKnowledgeBase(List.empty, kbaseOptions: _*)
 
   def buildKnowledgeBase(knowledgePackages: Iterable[KnowledgePackage], kbaseOptions: KnowledgeBaseOption*): RichKnowledgeBase = {
@@ -223,12 +221,14 @@ class RichSessionPseudoClock(clock: SessionPseudoClock) {
 
   def advanceBy(amount: Long, unit: TimeUnit = TimeUnit.MILLISECONDS): DateTime = {
     clock.advanceTime(amount, unit)
-    //TODO This is not the right place to update the org.joda time. Should be an SI clock that
-    // encapsulates drools, org.joda, and eventually camel.
+    //TODO This is not the right place to update the org.joda time. Should be a/the composite-clock that
+    // combines all relevant clocks.
     DateTimeUtils.setCurrentMillisFixed(clock.getCurrentTime)
     new DateTime(clock.getCurrentTime)
   }
-//  def advanceBy(amount: Duration): Unit = advanceBy(amount.getMillis)
+  
+  //TODO When used with scala-time these two methods will conflict.
   def advanceBy(amount: Period): DateTime = advanceBy(amount.toStandardDuration.getMillis)
+  //def advanceBy(amount: Duration): Unit = advanceBy(amount.getMillis)
 }
 

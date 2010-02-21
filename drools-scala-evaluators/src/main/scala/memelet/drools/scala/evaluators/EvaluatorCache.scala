@@ -1,4 +1,4 @@
-package memelet.drools.scala
+package memelet.drools.scala.evaluators
 
 import java.io.{ObjectInput, ObjectOutput, Externalizable}
 import org.drools.spi.Evaluator
