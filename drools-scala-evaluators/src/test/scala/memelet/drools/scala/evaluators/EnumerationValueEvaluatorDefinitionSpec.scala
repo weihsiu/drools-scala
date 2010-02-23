@@ -16,7 +16,7 @@ class EnumerationValueEvaluatorDefinitionSpec extends SpecsMatchers {
 
   case class Fact(value: FactValue.Value)
 
-  val drools = DroolsFixture(rules = Seq("memelet/drools/scala/evaluators/enum_evaluator.drl"))
+  val drools = DroolsFixture(rules = Seq("memelet/drools/scala/evaluators/EnumerationValueEvaluatorDefinitionSpec.drl"))
   import drools._
 
   @Test def enum_is_named {

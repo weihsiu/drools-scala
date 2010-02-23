@@ -21,24 +21,8 @@
 
     <dependency>
       <groupId>memelet.drools</groupId>
-      <artifactId>drools-scala-thirdparty</artifactId>
-      <version>${memelet.drools.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>memelet.drools</groupId>
       <artifactId>drools-scala-core</artifactId>
-      <version>${memelet.drools.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>memelet.drools</groupId>
-      <artifactId>drools-scala-core</artifactId>
-      <version>${memelet.drools.version}</version>
-      <type>test-jar</type>
-    </dependency>
-
-    <dependency>
-      <groupId>joda-time</groupId>
-      <artifactId>joda-time</artifactId>
+      <version>${drools.scala.version}</version>
     </dependency>
 
   </dependencies>

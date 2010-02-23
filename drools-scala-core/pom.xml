@@ -20,12 +20,6 @@
   <dependencies>
 
     <dependency>
-      <groupId>memelet.drools</groupId>
-      <artifactId>drools-scala-thirdparty</artifactId>
-      <version>${memelet.drools.version}</version>
-    </dependency>
-    
-    <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
     </dependency>

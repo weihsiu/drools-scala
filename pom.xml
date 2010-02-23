@@ -10,13 +10,12 @@
   <version>1.0-SNAPSHOT</version>
 
   <modules>
-    <module>drools-scala-thirdparty</module>
     <module>drools-scala-core</module>
     <module>drools-scala-evaluators</module>
   </modules>
 
   <properties>
-    <memelet.drools.version>1.0-SNAPSHOT</memelet.drools.version>
+    <drools.scala.version>1.0-SNAPSHOT</drools.scala.version>
 
     <drools.version>5.0.1</drools.version>
     <scala.version>2.8.0.Beta1</scala.version>
@@ -84,23 +83,6 @@
     <dependencies>
 
       <dependency>
-        <groupId>memelet.drools</groupId>
-        <artifactId>drools-scala-thirdparty</artifactId>
-        <version>${memelet.drools.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>memelet.drools</groupId>
-        <artifactId>drools-scala-core</artifactId>
-        <version>${memelet.drools.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>memelet.drools</groupId>
-        <artifactId>drools-scala-evaluators</artifactId>
-        <version>${memelet.drools.version}</version>
-      </dependency>
-
-
-      <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-library</artifactId>
         <version>${scala.version}</version>
@@ -110,22 +92,6 @@
         <artifactId>scala-compiler</artifactId>
         <version>${scala.version}</version>
         <scope>compile</scope>
-      </dependency>
-
-      <dependency>
-        <groupId>org.codehaus.groovy</groupId>
-        <artifactId>groovy-all</artifactId>
-        <version>${groovy.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant-launcher</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
 
       <dependency>
@@ -220,25 +186,6 @@
         <groupId>org.scala-tools.testing</groupId>
         <artifactId>${scalacheck.artifactId}</artifactId>
         <version>${scalacheck.version}</version>
-        <scope>test</scope>
-      </dependency>
-
-      <dependency>
-        <groupId>org.powermock.modules</groupId>
-        <artifactId>powermock-module-junit4</artifactId>
-        <version>${powermock.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.powermock.api</groupId>
-        <artifactId>powermock-api-mockito</artifactId>
-        <version>${powermock.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.spockframework</groupId>
-        <artifactId>spock-core</artifactId>
-        <version>0.4-groovy-1.7-SNAPSHOT</version>
         <scope>test</scope>
       </dependency>
 
