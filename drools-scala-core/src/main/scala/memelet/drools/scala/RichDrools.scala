@@ -96,6 +96,10 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
       case _ => session.setGlobal(identifier, value)
     }
 
+  def addGlobals(globals: Map[String,AnyRef]) {
+    globals.foreach { global => addGlobal(global._1, global._2) }
+  }
+
   def clock[T <: SessionClock] = session.getSessionClock.asInstanceOf[T]
   def timerService[T <: TimerService]: TimerService = {
     val sessionClock = session.getSessionClock[SessionClock]
@@ -103,6 +107,14 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
       sessionClock.asInstanceOf[TimerService]
     else
       throw new IllegalStateException("Session's clock !isInstanceOf TimerService: clock.class=" + sessionClock.getClass)
+  }
+
+  def update (fact: AnyRef) = {
+    val handle = fact match {
+      case handle: FactHandle => handle
+      case instance: AnyRef => session.getFactHandle(instance)
+    }
+    session update (handle, fact)
   }
 
   def retract (fact: AnyRef) = {

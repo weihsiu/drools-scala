@@ -16,11 +16,11 @@ object DroolsFixture {
 
 }
 
-class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) {
+class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) extends DroolsDebug {
 
   import RichDrools._
 
-  val session = {
+  val session: RichStatefulKnowledgeSession = {
     System.setProperty("drools.dialect.java.lngLevel", "1.6");
     System.setProperty("drools.dialect.mvel.strict", "false") //default=true
     System.setProperty("drools.dialect.mvel.langLevel", "4")  //default=4
@@ -39,25 +39,27 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
 
   setup(session)
 
-  def debugWorkingMemory() = DroolsDebug.debugWorkingMemory(session)
-  def debugAgenda() = DroolsDebug.debugAgenda(session: StatefulKnowledgeSession)
+  def debugWorkingMemory(): Unit = debugWorkingMemory(session)
+  def debugAgenda(): Unit = debugAgenda(session: StatefulKnowledgeSession)
 
 }
 
-object DroolsDebug {
+trait DroolsDebug {
+
+  def log(message: String): Unit = println(message)
   
   def debugWorkingMemory(session: StatefulKnowledgeSession) {
     session addEventListener new WorkingMemoryEventListener {
-      def objectInserted(e: ObjectInsertedEvent) = println("on-insert (%s)".format(e.getObject.toString))
-      def objectRetracted(e: ObjectRetractedEvent) = println("on-retract (%s)".format(e.getOldObject.toString))
-      def objectUpdated(e: ObjectUpdatedEvent) = println("on-update (%s)".format(e.getObject.toString))
+      def objectInserted(e: ObjectInsertedEvent) = log("on-insert (%s)".format(e.getObject.toString))
+      def objectRetracted(e: ObjectRetractedEvent) = log("on-retract (%s)".format(e.getOldObject.toString))
+      def objectUpdated(e: ObjectUpdatedEvent) = log("on-update (%s)".format(e.getObject.toString))
     }
   }
 
   def debugAgenda(session: StatefulKnowledgeSession) {
     session addEventListener new DebugAgendaEventListener {
-      def p(name: String, e: ActivationEvent) = println("on-%s (%s)".format(name, e.getActivation.getRule.getName))
-      def p(name: String, e: AgendaGroupEvent) = println("on-%s (%s)".format(name, e.getAgendaGroup.getName))
+      def p(name: String, e: ActivationEvent) = log("on-%s (%s)".format(name, e.getActivation.getRule.getName))
+      def p(name: String, e: AgendaGroupEvent) = log("on-%s (%s)".format(name, e.getAgendaGroup.getName))
       override def activationCreated(e: ActivationCreatedEvent) = p("activated", e)
       override def activationCancelled(e: ActivationCancelledEvent) = p("cancelled", e)
       override def afterActivationFired(e: AfterActivationFiredEvent) = p("after", e)
