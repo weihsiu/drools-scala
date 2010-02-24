@@ -123,6 +123,13 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
     }
   }
 
+  def insertOrUpdate (fact: AnyRef): FactHandle = {
+    session.getFactHandle(fact) match {
+      case handle: FactHandle => {session insert handle; handle}
+      case fact => session insert fact
+    }
+  }
+
   def retractFact (fact: AnyRef) {
     session.getFactHandle(fact) match {
       case handle: FactHandle => session retract handle
