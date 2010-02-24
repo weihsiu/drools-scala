@@ -1,18 +1,18 @@
 package memelet.drools.scala
 
 import org.drools.builder.{ResourceType, KnowledgeBuilderFactory}
-import org.drools.{KnowledgeBaseFactory, KnowledgeBase}
 import org.drools.io.{ResourceFactory, Resource}
 import org.drools.runtime.conf.ClockTypeOption
 import java.util.concurrent.TimeUnit
 import org.drools.definition.KnowledgePackage
 import scala.collection.JavaConversions._
 import org.drools.event.rule._
-import org.drools.runtime.rule.FactHandle
 import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
 import org.drools.conf.{KnowledgeBaseOption}
 import org.joda.time.{Period, DateTime, DateTimeUtils}
+import org.drools.{FactException, KnowledgeBaseFactory, KnowledgeBase}
+import org.drools.runtime.rule.{AgendaFilter, FactHandle}
 
 object DroolsBuilder {
 
@@ -56,14 +56,14 @@ object RichDrools {
   }
   def knowledgePackage(drlFilename: String) : Iterable[KnowledgePackage] = knowledgePackages(Seq(drlFilename))
   
-  implicit def enrichKnowledgeBase(kb: KnowledgeBase) = new RichKnowledgeBase(kb)
-  implicit def derichKnowledgeBase(rkbase: RichKnowledgeBase) = rkbase.kbase
+  implicit def enrichKnowledgeBase(kbase: KnowledgeBase): RichKnowledgeBase = new RichKnowledgeBase(kbase)
+  implicit def derichKnowledgeBase(rkbase: RichKnowledgeBase): KnowledgeBase = rkbase.kbase
 
-  implicit def enrichSession(sks: StatefulKnowledgeSession) = new RichStatefulKnowledgeSession(sks)
-  implicit def derichSession(rsks: RichStatefulKnowledgeSession) = rsks.session
+  implicit def enrichSession(ksession: StatefulKnowledgeSession): RichStatefulKnowledgeSession = new RichStatefulKnowledgeSession(ksession)
+  implicit def derichSession(rksession: RichStatefulKnowledgeSession): StatefulKnowledgeSession = rksession.session
 
-  implicit def enrichGlobals(globals: Globals) = new RichGlobals(globals)
-  implicit def enrichSessionPseudoClock(clock: SessionPseudoClock) = new RichSessionPseudoClock(clock)
+  implicit def enrichGlobals(globals: Globals): RichGlobals = new RichGlobals(globals)
+  implicit def enrichSessionPseudoClock(clock: SessionPseudoClock): RichSessionPseudoClock = new RichSessionPseudoClock(clock)
   
   val REALTIME_CLOCK_OPTION: ClockTypeOption = ClockTypeOption.get("realtime")
   val PSUEDO_CLOCK_OPTION: ClockTypeOption = ClockTypeOption.get("pseudo")
@@ -109,21 +109,30 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
       throw new IllegalStateException("Session's clock !isInstanceOf TimerService: clock.class=" + sessionClock.getClass)
   }
 
-  def update (fact: AnyRef) = {
-    val handle = fact match {
+  def handleOf(fact: AnyRef): FactHandle = {
+    session.getFactHandle(fact) match {
       case handle: FactHandle => handle
-      case instance: AnyRef => session.getFactHandle(instance)
+      case null => throw new FactException("Fact handle not found")
     }
-    session update (handle, fact)
   }
 
-  def retract (fact: AnyRef) = {
-    val handle = fact match {
-      case handle: FactHandle => handle
-      case instance: AnyRef => session.getFactHandle(instance)
+  def updateFact (fact: AnyRef) {
+    session.getFactHandle(fact) match {
+      case handle: FactHandle => session insert handle
+      case null => throw new FactException("Fact handle not found: " + fact)
     }
-    session retract handle
   }
+
+  def retractFact (fact: AnyRef) {
+    session.getFactHandle(fact) match {
+      case handle: FactHandle => session retract handle
+      case null => throw new FactException("Fact handle not found: " + fact)
+    }
+  }
+
+  def fire() = session.fireAllRules()
+  def fire(max: Int) = session.fireAllRules(max)
+  def fire(filter: AgendaFilter) = session.fireAllRules(filter)
 
   def facts[T: Manifest]: Set[T] = {
     val filter = new ObjectFilter() {
@@ -184,9 +193,6 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
       override def beforeActivationFired(e: BeforeActivationFiredEvent) = f(e)
     }
   }
-
-  def fire: Int = session fireAllRules
-
 }
 
 class RichGlobals(globals: Globals) {

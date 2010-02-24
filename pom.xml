@@ -19,7 +19,6 @@
 
     <drools.version>5.0.1</drools.version>
     <scala.version>2.8.0.Beta1</scala.version>
-    <groovy.version>1.7.0</groovy.version>
 
     <joda.time.version>1.6</joda.time.version>
     <scala.time.artifactId>time_2.8.0.Beta1-RC5</scala.time.artifactId>
@@ -27,7 +26,7 @@
 
     <slf4j.version>1.5.8</slf4j.version>
     <logback.version>0.9.18</logback.version>
-    <google-collections.version>1.0.0</google-collections.version>
+
     <junit.version>4.8.1</junit.version>
     <mockito.version>1.8.2</mockito.version>
     <objenesis.version>1.2</objenesis.version>
@@ -36,48 +35,9 @@
     <specs.version>1.6.3</specs.version>
     <scalacheck.artifactId>scalacheck_2.8.0.Beta1</scalacheck.artifactId>
     <scalacheck.version>1.7-SNAPSHOT</scalacheck.version>
-    <powermock.version>1.3.5</powermock.version>
     <cglib.version>2.1_3</cglib.version>
 
   </properties>
-
-  <distributionManagement>
-    <repository>
-      <id>si-nexus</id>
-      <url>http://build:8090/nexus/content/repositories/thirdparty/</url>
-      <uniqueVersion>false</uniqueVersion>
-    </repository>
-    <snapshotRepository>
-      <id>si-nexus</id>
-      <url>http://build:8090/nexus/content/repositories/thirdparty-snapshots/</url>
-      <uniqueVersion>false</uniqueVersion>
-    </snapshotRepository>
-  </distributionManagement>
-
-  <repositories>
-    <repository>
-      <id>si-nexus</id>
-      <url>http://si-nexus</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-  </repositories>
-  <pluginRepositories>
-    <pluginRepository>
-      <id>si-nexus-plugin</id>
-      <url>http://si-nexus</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </pluginRepository>
-  </pluginRepositories>
 
   <dependencyManagement>
     <dependencies>
@@ -347,4 +307,46 @@
 
   </build>
 
+  <profiles>
+    <profile>
+      <id>si-nexus</id>
+      <distributionManagement>
+        <repository>
+          <id>si-nexus</id>
+          <url>http://build:8090/nexus/content/repositories/thirdparty/</url>
+          <uniqueVersion>false</uniqueVersion>
+        </repository>
+        <snapshotRepository>
+          <id>si-nexus</id>
+          <url>http://build:8090/nexus/content/repositories/thirdparty-snapshots/</url>
+          <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+      </distributionManagement>
+      <repositories>
+        <repository>
+          <id>si-nexus</id>
+          <url>http://si-nexus</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>si-nexus-plugin</id>
+          <url>http://si-nexus</url>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  
 </project>
