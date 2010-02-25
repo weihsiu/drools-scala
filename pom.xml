@@ -11,6 +11,7 @@
 
   <modules>
     <module>drools-scala-core</module>
+    <module>drools-scala-objectype</module>
     <module>drools-scala-evaluators</module>
   </modules>
 

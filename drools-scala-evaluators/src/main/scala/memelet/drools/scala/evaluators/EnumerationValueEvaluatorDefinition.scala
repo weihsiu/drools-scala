@@ -28,7 +28,7 @@ class EnumerationValueEvaluatorDefinition extends EvaluatorDefinition
     if (isNegated) NotIsNamedEvaluator else IsNamedEvaluator
 
   object IsNamedEvaluator extends IsNamedEvaluator(IsNamedOperator)
-  object NotIsNamedEvaluator extends IsNamedEvaluator(NotIsNamedOperator) with NegatedBaseEvaluator
+  object NotIsNamedEvaluator extends IsNamedEvaluator(NotIsNamedOperator) with NegatedEvaluateMethods
 
   class IsNamedEvaluator(operator: Operator) extends BaseEvaluator(ValueType.OBJECT_TYPE, operator) {
 

@@ -25,6 +25,14 @@
       <version>${drools.scala.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>memelet.drools</groupId>
+      <artifactId>drools-scala-core</artifactId>
+      <version>${drools.scala.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

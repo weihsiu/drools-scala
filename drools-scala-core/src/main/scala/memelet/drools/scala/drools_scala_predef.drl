@@ -1,0 +1,5 @@
+import scala.Option
+
+global String _
+global scala.None$ None
+

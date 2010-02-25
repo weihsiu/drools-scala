@@ -16,11 +16,12 @@ import org.drools.runtime.rule.{AgendaFilter, FactHandle}
 
 object DroolsBuilder {
 
+  val scalaGlobals = Seq("memelet/drools/scala/drools_scala_predef.drl")
+
   def buildKnowledgePackages(drlFilenames: Iterable[String]) : Iterable[KnowledgePackage] = {
     val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
-    for (drlFilename <- drlFilenames) {
-      val resource: Resource = ResourceFactory.newClassPathResource(drlFilename, getClass)
-      kbuilder.add(resource, ResourceType.DRL)
+    (scalaGlobals ++ drlFilenames).foreach { filename =>
+       kbuilder.add(ResourceFactory.newClassPathResource(filename), ResourceType.DRL)
     }
     if (kbuilder.hasErrors) {
       throw new RuntimeException(kbuilder.getErrors.toString)
@@ -78,7 +79,9 @@ class RichKnowledgeBase(val kbase: KnowledgeBase) {
   def statefulSession(implicit clockType: ClockTypeOption = RichDrools.REALTIME_CLOCK_OPTION) = {
     val ksessionConfig = KnowledgeBaseFactory.newKnowledgeSessionConfiguration()
     ksessionConfig.setOption(clockType)
-    kbase.newStatefulKnowledgeSession(ksessionConfig, null)
+    val ksession: StatefulKnowledgeSession = kbase.newStatefulKnowledgeSession(ksessionConfig, null)
+    ksession.setGlobal("None", None)
+    ksession
   }
 }
 
