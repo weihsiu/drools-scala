@@ -4,6 +4,7 @@ import org.drools.base.{BaseEvaluator, ValueType}
 import org.drools.base.evaluators.{Operator, EvaluatorDefinition}
 import EvaluatorDefinition.Target
 import memelet.drools.scala.NoopExternalizable
+import memelet.drools.scala.evaluators.Evaluators._
 
 class EnumerationValueEvaluatorDefinition extends RichEvaluatorDefinition(Target.FACT)
         with GetEvaluatorByOperatorIdAndNegated
@@ -13,11 +14,10 @@ class EnumerationValueEvaluatorDefinition extends RichEvaluatorDefinition(Target
   registerEvaluator(new IsNamedEvaluator(IsNamedOperator))
   registerEvaluator(new IsNamedEvaluator(IsNamedOperator negated))
 
-  private class IsNamedEvaluator(operator: Operator)
-          extends BaseEvaluator(ValueType.OBJECT_TYPE, operator)
-          with EvaluateMethods[Enumeration#Value, String] with EvaluatorOperationExtractor {
+  private class IsNamedEvaluator(operator: Operator) extends RichEvaluator[Enumeration#Value, String](ValueType.OBJECT_TYPE, operator)
+          with EvaluatorOperationExtractor {
 
-    val evalNullFactValue = true
+    lazy val evalNullFactValue = false
     
     def eval(factValue: Enumeration#Value, value: String) = factValue.toString == value
 

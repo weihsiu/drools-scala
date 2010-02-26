@@ -12,9 +12,14 @@ class OptionEvaluatorDefinitionSpec extends EvaluatorDefinitionSpec(new OptionEv
       (Some("other"), "isSome", "some", false),
       (Some("some"), "isSome", Some("some"), true),
       (Some("some"), "isSome", Some("other"), false),
-      (Some("other"), "isSome", Some("some"), false)
+      (Some("other"), "isSome", Some("some"), false),
+      (Some("some"), "isSome", None, false),
+      (None, "isSome", Some("some"), false),
+      (None, "isSome", None, true)
     )
     validate(ValueType.OBJECT_TYPE, data ++ not(data))
   }
+
+  //TODO @Test def validateNulls {
 
 }

@@ -20,5 +20,7 @@ class EnumerationValueEvaluatorDefinitionSpec extends EvaluatorDefinitionSpec(ne
     )
     validate(ValueType.OBJECT_TYPE, data ++ not(data))
   }
+
+  //TODO @Test def validateNulls {
   
 }
