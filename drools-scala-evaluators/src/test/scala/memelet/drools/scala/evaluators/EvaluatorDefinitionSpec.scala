@@ -33,8 +33,13 @@ abstract class EvaluatorDefinitionSpec(definitionUnderTest: EvaluatorDefinition)
 
   def validate(valueType: ValueType, datum: Seq[TestData]) {
     for (data <- datum) {
-      val evaluator = registry.getEvaluatorDefinition(data.operatorId).getEvaluator(valueType, data.operatorId, data.isNegated, null)
+      val evaluatorDef = registry.getEvaluatorDefinition(data.operatorId)
+      val evaluator = evaluatorDef.getEvaluator(valueType, data.operatorId, data.isNegated, null)
+
       evaluator.getValueType must_== valueType
+      evaluator.getOperator.getOperatorString must_== data.operatorId
+      evaluator.getOperator.isNegated must_== data.isNegated
+      
       checkEvaluatorMethodWithFieldValue(valueType, extractor, data, evaluator)
       checkEvaluatorMethodCachedRight(valueType, extractor, data, evaluator)
       checkEvaluatorMethodCachedLeft(valueType, extractor, data, evaluator)

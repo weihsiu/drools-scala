@@ -4,19 +4,89 @@ import org.drools.common.InternalWorkingMemory
 import org.drools.spi.Evaluator
 import org.drools.spi.FieldValue
 import org.drools.spi.InternalReadAccessor
-import org.drools.base.BaseEvaluator
 import org.drools.rule.VariableRestriction.{ObjectVariableContextEntry, VariableContextEntry}
+import org.drools.RuntimeDroolsException
+import org.drools.base.{ValueType, BaseEvaluator}
+import org.drools.base.evaluators.{EvaluatorDefinition, Operator}
 
-trait NegatedEvaluateMethods extends Evaluator {
-  abstract override def evaluate(workingMemory: InternalWorkingMemory, extractor: InternalReadAccessor, fact: Any, value: FieldValue): Boolean =
-    ! super.evaluate(workingMemory, extractor, fact, value)
-  abstract override def evaluateCachedRight(workingMemory: InternalWorkingMemory, context: VariableContextEntry, left: Any): Boolean =
-    ! super.evaluateCachedRight(workingMemory, context, left)
-  abstract override def evaluateCachedLeft(workingMemory: InternalWorkingMemory, context: VariableContextEntry, right: Any): Boolean =
-    ! super.evaluateCachedLeft(workingMemory, context, right)
-  abstract override def evaluate(workingMemory: InternalWorkingMemory, leftExtractor: InternalReadAccessor, left: Any, rightExtractor: InternalReadAccessor, right: Any): Boolean =
-    ! super.evaluate(workingMemory, leftExtractor, left, rightExtractor, right)
+object Evaluators {
+
+  import EvaluatorDefinition.Target
+
+  class OperatorNotSupportedException(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target)
+          extends RuntimeDroolsException(
+            "Opeartor not supported: valueType=%s, operatorId=%s, isNegated=%s, params=%s, leftTarget=%s, rightTarget=%s".format(
+            vtype, operatorId, isNegated, parameterText, left, right))
+
+  def RegisteredOperator(operatorId: String, isNegated: Boolean = false): Operator =
+    Operator.addOperatorToRegistry(operatorId, isNegated)
+
+  class RichOperator(operator: Operator) {
+    def unary_! : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
+    def negated : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
+  }
+  implicit def enrichOperator(operator: Operator) = new RichOperator(operator)
+
 }
+
+//---- EvaluatorDefinition ----
+
+import EvaluatorDefinition.Target
+
+abstract class RichEvaluatorDefinition(target: Target) extends EvaluatorDefinition {
+
+  class OperatorNotSupportedException(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target)
+          extends RuntimeDroolsException(
+            "Opeartor not supported: valueType=%s, operatorId=%s, isNegated=%s, params=%s, leftTarget=%s, rightTarget=%s".format(
+            vtype, operatorId, isNegated, parameterText, left, right))
+
+  def registerOperator(operatorId: String, isNegated: Boolean = false): Operator =
+    Operator.addOperatorToRegistry(operatorId, isNegated)
+
+  class RichOperator(operator: Operator) {
+    def unary_! : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
+    def negated : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
+  }
+  implicit def enrichOperator(operator: Operator) = new RichOperator(operator)
+
+  private[evaluators] var evaluators = Set[Evaluator]()
+
+  final def registerEvaluator(evaluator: Evaluator) { evaluators += evaluator }
+
+  final def getTarget = target
+  lazy val isNegatable: Boolean = evaluators exists (_.getOperator.isNegated)
+  lazy val getEvaluatorIds = evaluators.map(_.getOperator.getOperatorString).toArray
+  final def supportsType(valueType: ValueType) = evaluators.exists(_.getValueType == valueType)
+
+}
+
+trait DelegatingGetEvaluatorMethods { self: RichEvaluatorDefinition =>
+
+  def getEvaluator(vtype: ValueType, operator: Operator): Evaluator =
+    self.getEvaluator(vtype, operator.getOperatorString, operator.isNegated, null)
+
+  def getEvaluator(vtype: ValueType, operator: Operator, parameterText: String): Evaluator =
+    self.getEvaluator(vtype, operator.getOperatorString, operator.isNegated, parameterText)
+
+  def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String): Evaluator =
+    self.getEvaluator(vtype, operatorId, isNegated, parameterText, getTarget, getTarget)
+}
+
+trait GetEvaluatorByOperatorIdAndNegated extends DelegatingGetEvaluatorMethods {
+  self: RichEvaluatorDefinition =>
+
+  import Evaluators._
+  import EvaluatorDefinition.Target
+
+  def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator = {
+    evaluators find { e =>
+      e.getOperator.getOperatorString == operatorId && e.getOperator.isNegated == isNegated
+    } getOrElse (throw new OperatorNotSupportedException(vtype, operatorId, isNegated, parameterText, left, right))
+  }
+
+}
+
+//---- Evaluator ----
 
 trait EvaluatorOperationExtractor { evaluator: BaseEvaluator =>
   def unapply(operation: (String, Boolean)): Option[Evaluator] =
