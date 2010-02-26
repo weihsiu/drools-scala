@@ -9,26 +9,6 @@ import org.drools.RuntimeDroolsException
 import org.drools.base.{ValueType, BaseEvaluator}
 import org.drools.base.evaluators.{EvaluatorDefinition, Operator}
 
-object Evaluators {
-
-  import EvaluatorDefinition.Target
-
-  class OperatorNotSupportedException(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target)
-          extends RuntimeDroolsException(
-            "Opeartor not supported: valueType=%s, operatorId=%s, isNegated=%s, params=%s, leftTarget=%s, rightTarget=%s".format(
-            vtype, operatorId, isNegated, parameterText, left, right))
-
-  def RegisteredOperator(operatorId: String, isNegated: Boolean = false): Operator =
-    Operator.addOperatorToRegistry(operatorId, isNegated)
-
-  class RichOperator(operator: Operator) {
-    def unary_! : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
-    def negated : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
-  }
-  implicit def enrichOperator(operator: Operator) = new RichOperator(operator)
-
-}
-
 //---- EvaluatorDefinition ----
 
 import EvaluatorDefinition.Target
@@ -75,7 +55,6 @@ trait DelegatingGetEvaluatorMethods { self: RichEvaluatorDefinition =>
 trait GetEvaluatorByOperatorIdAndNegated extends DelegatingGetEvaluatorMethods {
   self: RichEvaluatorDefinition =>
 
-  import Evaluators._
   import EvaluatorDefinition.Target
 
   def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator = {
