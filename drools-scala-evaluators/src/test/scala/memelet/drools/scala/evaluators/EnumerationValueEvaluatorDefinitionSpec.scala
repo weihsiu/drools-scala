@@ -1,35 +1,24 @@
 package memelet.drools.scala.evaluators
 
-import org.specs.SpecsMatchers
-import memelet.drools.scala.{DroolsFixture, RichDrools}
 import org.junit.Test
+import org.drools.base.ValueType
 
-class EnumerationValueEvaluatorDefinitionSpec extends SpecsMatchers {
+class EnumerationValueEvaluatorDefinitionSpec extends EvaluatorDefinitionSpec(new EnumerationValueEvaluatorDefinition) {
 
-  import RichDrools._
-
-  object FactValue extends Enumeration {
-    val E1 = Value("E1")
-    val E2 = Value("E2")
+  object Enum extends Enumeration {
+    val V1 = Value("V1")
+    val V2 = Value("V2")
   }
-  import FactValue._
+  import Enum._
 
-  case class Fact(value: FactValue.Value)
-
-  val drools = DroolsFixture(rules = Seq("memelet/drools/scala/evaluators/EnumerationValueEvaluatorDefinitionSpec.drl"))
-  import drools._
-
-  @Test def enum_is_named {
-    session insert Fact(E1)
-    session fire
-
-    rulesFired must_== Set("is_named E1")
+  @Test def validate {
+    val data = Seq[TestData](
+      (V1, "isNamed", "V1", true),
+      (V1, "isNamed", "V2", false),
+      (V2, "isNamed", "V2", true),
+      (V2, "isNamed", "V1", false)
+    )
+    validate(ValueType.OBJECT_TYPE, data ++ not(data))
   }
-
-  @Test def enum_is_not_named {
-    session insert Fact(E2)
-    session fire
-
-    rulesFired must_== Set("not is_named E1")
-  }
+  
 }

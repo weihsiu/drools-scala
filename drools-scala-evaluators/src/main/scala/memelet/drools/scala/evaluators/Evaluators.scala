@@ -23,45 +23,61 @@ trait EvaluatorOperationExtractor { evaluator: BaseEvaluator =>
     if (operation._1 == getOperator.getOperatorString && operation._2 == getOperator.isNegated) Some(evaluator) else None
 }
 
+//TODO
+// - currently hard-coded to assume context: ObjectVariableContextEntry
+// - improve the usage of 'right', 'left', 'factValue', 'otherValue' to conform better to the rete semantics
+//
 trait EvaluateMethods[R,L] { self: Evaluator =>
 
-  protected def eval(factValue: R, value: L): Boolean
+  // In Drools speak, 'Right' really means the pattern fact value on the left: Fact(value == ...)
+  // 1) fact.prop == null => false                 // eg, SetHolder(set contains [x,y])
+  // 2) fact.prop == null => fact.prop == value    // eg, StringHolder(str == value)
+  val evalNullFactValue: Boolean
 
-  // null == null => true
+  def eval(factValue: R, value: L): Boolean
+
+  private def isNegated = getOperator.isNegated
+  private implicit def anyToR(any: Any): R = any.asInstanceOf[R]
+  private implicit def anyToL(any: Any): L = any.asInstanceOf[L]
+
   def evaluate(workingMemory: InternalWorkingMemory, extractor: InternalReadAccessor, fact: Any, value: FieldValue): Boolean = {
     val factValue = extractor.getValue(workingMemory, fact)
-    if (factValue == null)
-      value.getValue == null
-    else
-      getOperator.isNegated ^ eval(factValue.asInstanceOf[R], value.getValue.asInstanceOf[L])
-  }
-
-  // null == null => true
-  def evaluateCachedRight(workingMemory: InternalWorkingMemory, context: VariableContextEntry, left: Any): Boolean = {
-    if (context.rightNull)
-      left == null
+    val otherValue = value.getValue
+    if (factValue == null && !evalNullFactValue)
+      false
     else {
-      val factValue = context.asInstanceOf[ObjectVariableContextEntry].right
-      val value = context.declaration.getExtractor.getValue(workingMemory, left)
-      getOperator.isNegated ^ eval(factValue.asInstanceOf[R], value.asInstanceOf[L])
+      isNegated ^ eval(factValue, otherValue)
     }
   }
 
-  // null == null => true
+  def evaluateCachedRight(workingMemory: InternalWorkingMemory, context: VariableContextEntry, left: Any): Boolean = {
+    if (context.rightNull && !evalNullFactValue)
+      false
+    else {
+      val factValue = context.asInstanceOf[ObjectVariableContextEntry].right
+      val otherValue = context.declaration.getExtractor.getValue(workingMemory, left)
+      isNegated ^ eval(factValue, otherValue)
+    }
+  }
+
   def evaluateCachedLeft(workingMemory: InternalWorkingMemory, context: VariableContextEntry, right: Any): Boolean = {
-    if (context.leftNull)
-      right == null
+    if (context.leftNull && !evalNullFactValue)
+      false
     else {
       val factValue = context.declaration.getExtractor.getValue(workingMemory, right)
-      val value = context.asInstanceOf[ObjectVariableContextEntry].left
-      getOperator.isNegated ^ eval(factValue.asInstanceOf[R], value.asInstanceOf[L])
+      val otherValue = context.asInstanceOf[ObjectVariableContextEntry].left
+      isNegated ^ eval(factValue, otherValue)
     }
   }
 
   def evaluate(workingMemory: InternalWorkingMemory, leftExtractor: InternalReadAccessor, left: Any, rightExtractor: InternalReadAccessor, right: Any): Boolean = {
-    throw new UnsupportedOperationException("Can't figure out the left and right: debug now to verify the comments")
-//      val optionValue: Option[_] = leftExtractor.getValue(workingMemory, left).asInstanceOf[Option[_]]
-//      return optionValue.isDefined
+    val factValue: Any = leftExtractor.getValue(workingMemory, left)
+    if (factValue == null & !evalNullFactValue)
+      false
+    else {
+      val otherValue: Any = rightExtractor.getValue(workingMemory, right)
+      isNegated ^ eval(factValue, otherValue)
+    }
   }
 
 }

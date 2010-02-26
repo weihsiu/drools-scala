@@ -1,11 +1,9 @@
 package memelet.drools.scala.evaluators
 
-import memelet.drools.scala.NoopExternalizable
-import org.drools.base.evaluators.{Operator, EvaluatorDefinition}
+import org.drools.spi.Evaluator
 import org.drools.base.{BaseEvaluator, ValueType}
-import org.drools.rule.VariableRestriction.{ObjectVariableContextEntry, VariableContextEntry}
-import org.drools.spi.{Evaluator, FieldValue, InternalReadAccessor}
-import org.drools.common.InternalWorkingMemory
+import org.drools.base.evaluators.{Operator, EvaluatorDefinition}
+import memelet.drools.scala.NoopExternalizable
 
 class OptionEvaluatorDefinition extends EvaluatorDefinition
         with DelegatingGetEvaluatorMethods with NoopExternalizable {
@@ -31,11 +29,17 @@ class OptionEvaluatorDefinition extends EvaluatorDefinition
   object IsSomeEvaluator extends IsSomeEvaluator(IsSomeOperator)
   object NotIsSomeEvaluator extends IsSomeEvaluator(NotIsSomeOperator)
 
-  abstract class IsSomeEvaluator(operator: Operator) extends BaseEvaluator(ValueType.OBJECT_TYPE, operator)
+  abstract class IsSomeEvaluator(operator: Operator)
+          extends BaseEvaluator(ValueType.OBJECT_TYPE, operator)
           with EvaluateMethods[Option[_], Any] with EvaluatorOperationExtractor {
 
-    val compareNulls = true
-    def eval(factValue: Option[_], value: Any) = factValue == Some(value)
+    val evalNullFactValue = false // An Option[_] should be None, never null
+    def eval(factValue: Option[_], value: Any) = {
+      value match {
+        case Some(_) => factValue == value
+        case _       => factValue == Some(value)
+      }
+    }
 
   }
 
