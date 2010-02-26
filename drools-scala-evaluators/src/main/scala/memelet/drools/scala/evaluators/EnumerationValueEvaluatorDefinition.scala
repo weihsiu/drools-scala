@@ -18,6 +18,7 @@ class EnumerationValueEvaluatorDefinition extends EvaluatorDefinition
   val getTarget = Target.FACT
   def supportsType(vtype: ValueType) = vtype == ValueType.OBJECT_TYPE
 
+  //TODO Simplify and DRY
   def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator = {
     (operatorId, isNegated) match {
       case IsNamedEvaluator(_) => IsNamedEvaluator
@@ -25,9 +26,6 @@ class EnumerationValueEvaluatorDefinition extends EvaluatorDefinition
       case _ => throw new IllegalArgumentException
     }
   }
-//
-//  def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator =
-//    if (isNegated) NotIsNamedEvaluator else IsNamedEvaluator
 
   object IsNamedEvaluator extends IsNamedEvaluator(IsNamedOperator)
   object NotIsNamedEvaluator extends IsNamedEvaluator(NotIsNamedOperator)
