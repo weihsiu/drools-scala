@@ -71,7 +71,7 @@ object RichDrools {
 }
 
 class RichKnowledgeBase(val kbase: KnowledgeBase) {
-
+  
   def addKnowledgePackages(drlFilenames: Iterable[String]) {
     kbase.addKnowledgePackages(DroolsBuilder.buildKnowledgePackages(drlFilenames))
   }
@@ -80,8 +80,12 @@ class RichKnowledgeBase(val kbase: KnowledgeBase) {
     val ksessionConfig = KnowledgeBaseFactory.newKnowledgeSessionConfiguration()
     ksessionConfig.setOption(clockType)
     val ksession: StatefulKnowledgeSession = kbase.newStatefulKnowledgeSession(ksessionConfig, null)
-    ksession.setGlobal("None", None)
+    setScalaGlobals(ksession)
     ksession
+  }
+
+  def setScalaGlobals(ksession: StatefulKnowledgeSession) {
+    ksession.setGlobal("None", None)
   }
 }
 
@@ -146,13 +150,9 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
 
   def facts[T: Manifest]: Set[T] = {
     val filter = new ObjectFilter() {
-      def accept(obj: AnyRef) = {
-        manifest[T].erasure.isAssignableFrom(obj.getClass)
-      }
+      def accept(obj: AnyRef) = manifest[T].erasure.isAssignableFrom(obj.getClass)
     }
-    var results = Set[T]()
-    results ++ (for (obj <- session.getObjects(filter)) yield obj)
-    results
+    Set.empty[T] ++ (for (obj <- session.getObjects(filter)) yield obj.asInstanceOf[T])
   }
 
   def onInserted[T](f : T => Any)(implicit m: Manifest[T]) {
