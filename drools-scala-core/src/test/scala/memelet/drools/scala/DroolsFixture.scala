@@ -44,6 +44,7 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
 
 }
 
+object DroolsDebug extends DroolsDebug
 trait DroolsDebug {
 
   def log(message: String): Unit = println(message)

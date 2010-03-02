@@ -66,6 +66,7 @@ class SpikeRules {
 
   private def doStuff(f1: FactOne, f2: FactTwo) { /*...*/ }
 
+  //-----------------------------------------------------
   object RuleX extends Rule (
     name = "ruleX",
     agendaGroup = AgendaXXX)
@@ -76,13 +77,9 @@ class SpikeRules {
 
     then {
       f2.things.filter(_ == "bar")
-      doXSpecificStuff(f1)
-      doMoreXSpecificStuff(f1, f2)
     }
-
-    private def doXSpecificStuff(f1: FactOne) { /*...*/ }
-    private def doMoreXSpecificStuff(f1: FactOne, f2: FactTwo) { /*...*/ }
   }
+  //-----------------------------------------------------
 
   object RuleY extends Rule (
     name = "ruleY",
