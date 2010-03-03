@@ -2,10 +2,10 @@ package memelet.drools.scala.dsl
 
 rule "r1" dialect "mvel"
 when
-  f1_1: FactOne(name == "f1_1")
-  f2_1: FactTwo(name == "f2_1", f == f1_1)
+  f1_1: FactOneX(name == "f1_1")
+  f2_1: FactTwoX(name == "f2_1", f == f1_1)
 then
-//  System.out.println("*** r1: " + f1_1 + ", " + f2_1);
+  System.out.println("*** r1: " + f1_1 + ", " + f2_1);
 end
 
 //rule "r2" dialect "java"
