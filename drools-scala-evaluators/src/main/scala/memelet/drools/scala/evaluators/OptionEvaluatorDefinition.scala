@@ -7,7 +7,6 @@ import memelet.drools.scala.NoopExternalizable
 import memelet.drools.scala.evaluators.Evaluators._
 
 class OptionEvaluatorDefinition extends RichEvaluatorDefinition(Target.FACT)
-        with GetEvaluatorByOperatorIdAndNegated
         with NoopExternalizable {
 
   val IsSomeOperator = registerOperator("isSome")
@@ -26,7 +25,6 @@ class OptionEvaluatorDefinition extends RichEvaluatorDefinition(Target.FACT)
       case None    => factValue == None
       case _       => factValue == Some(value)
     }
-
   }
 
 }

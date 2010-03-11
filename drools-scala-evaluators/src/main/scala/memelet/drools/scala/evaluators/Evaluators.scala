@@ -22,23 +22,29 @@ object Evaluators {
 
   //---- EvaluatorDefinition ----
 
-  abstract class RichEvaluatorDefinition(target: Target) extends EvaluatorDefinition {
+  abstract class RichEvaluatorDefinition(target: Target) extends EvaluatorDefinition with DelegatingGetEvaluatorMethods {
 
     class OperatorNotSupportedException(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target)
             extends RuntimeDroolsException(
-              "Opeartor not supported: valueType=%s, operatorId=%s, isNegated=%s, params=%s, leftTarget=%s, rightTarget=%s".format(
+              "Operator not supported: valueType=%s, operatorId=%s, isNegated=%s, params=%s, leftTarget=%s, rightTarget=%s".format(
               vtype, operatorId, isNegated, parameterText, left, right))
 
     def registerOperator(operatorId: String, isNegated: Boolean = false): Operator =
       Operator.addOperatorToRegistry(operatorId, isNegated)
 
-    private[Evaluators] var evaluators = Set[Evaluator]()
+    private[Evaluators] var evaluators = Set[RichEvaluator[_,_]]()
 
-    final def registerEvaluator(evaluator: Evaluator) = { evaluators += evaluator; evaluator }
-    final def registerEvaluators(evaluators: Evaluator*) {
+    final def registerEvaluator(evaluator: RichEvaluator[_,_]) = { evaluators += evaluator; evaluator }
+    final def registerEvaluators(evaluators: RichEvaluator[_,_]*) {
       evaluators.foreach(registerEvaluator _)
     }
 
+    def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator = {
+      evaluators find (_.supports(vtype, operatorId, isNegated, parameterText, left, right)) getOrElse {
+        throw new OperatorNotSupportedException(vtype, operatorId, isNegated, parameterText, left, right)
+      }
+    }
+    
     final def getTarget = target
     lazy val isNegatable: Boolean = evaluators exists (_.getOperator.isNegated)
     lazy val getEvaluatorIds = evaluators map (_.getOperator.getOperatorString) toArray
@@ -58,26 +64,33 @@ object Evaluators {
       self.getEvaluator(vtype, operatorId, isNegated, parameterText, getTarget, getTarget)
   }
 
-  trait GetEvaluatorByOperatorIdAndNegated extends DelegatingGetEvaluatorMethods {
-    self: RichEvaluatorDefinition =>
-
-    def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator = {
-      evaluators find { e =>
-        e.getOperator.getOperatorString == operatorId && e.getOperator.isNegated == isNegated
-      } getOrElse {
-        throw new OperatorNotSupportedException(vtype, operatorId, isNegated, parameterText, left, right)
-      }
-    }
-
-  }
-
   //---- Evaluator ----
+
+  /**
+   * The Drools ValueType "system" is a very poor design. It allows for no polymorphism, which results in an explosion
+   * of duplicate code (see SetEvaluatorDefintion for an example where duplicate evaluator classes with identical code
+   * are defined one for each ValueType. This trait allows a single [rich]evaluator to support all "object" subtypes.
+   *
+   * (If the need arises, this trait could be made more generic by supporting any combination of ValueTypes.)  
+   */
+  trait SupportsAnyObjectValueType { self: RichEvaluator[_,_] =>
+
+    import ValueType._
+    private val allObjectValueTypes = Set(
+      CHAR_TYPE, BYTE_TYPE, SHORT_TYPE, INTEGER_TYPE, LONG_TYPE, FLOAT_TYPE, DOUBLE_TYPE, BOOLEAN_TYPE,
+      DATE_TYPE, STRING_TYPE, OBJECT_TYPE, BIG_DECIMAL_TYPE, BIG_INTEGER_TYPE
+    )
+
+    override def supports(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target) = {
+      allObjectValueTypes.contains(vtype) && self.operator.getOperatorString == operatorId && self.operator.isNegated == isNegated
+    }
+  }
 
   //TODO
   // - currently hard-coded to assume context: ObjectVariableContextEntry
   // - improve the usage of 'right', 'left', 'factValue', 'otherValue' to conform better to the rete semantics
   //
-  abstract class RichEvaluator[R,L](valueType: ValueType, operator: Operator) extends BaseEvaluator(valueType, operator) {
+  abstract class RichEvaluator[R,L](val valueType: ValueType, val operator: Operator) extends BaseEvaluator(valueType, operator) {
 
     val nullValue: AnyRef = null
 
@@ -86,6 +99,10 @@ object Evaluators {
     // 1) fact.prop == null => false                 // eg, SetHolder(set contains [x,y])
     // 2) fact.prop == null => fact.prop == value    // eg, StringHolder(str == value)
     val evalNullFactValue: Boolean
+
+    def supports(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target) = {
+      this.valueType == vtype && this.operator.getOperatorString == operatorId && this.operator.isNegated == isNegated
+    }
 
     def eval(factValue: R, value: L): Boolean
 
@@ -117,7 +134,7 @@ object Evaluators {
       if (right == null && !evalNullFactValue)
         false
       else {
-        val factValue = context.declaration.getExtractor.getValue(workingMemory, right)
+        val factValue = context.extractor.getValue(workingMemory, right)
         val otherValue = context.asInstanceOf[ObjectVariableContextEntry].left
         isNegated ^ eval(factValue, otherValue)
       }

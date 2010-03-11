@@ -43,7 +43,7 @@ abstract class AbstractEvaluatorDefinitionSpec[D <: EvaluatorDefinition](val def
       checkEvaluatorMethodWithFieldValue(valueType, extractor, data, evaluator)
       checkEvaluatorMethodCachedRight(valueType, extractor, data, evaluator)
       checkEvaluatorMethodCachedLeft(valueType, extractor, data, evaluator)
-      checkEvaluatorMethodWith2Extractors(valueType, extractor, data, evaluator)
+      checkEvaluatorMethodWithTwoExtractors(valueType, extractor, data, evaluator)
     }
   }
 
@@ -64,7 +64,7 @@ abstract class AbstractEvaluatorDefinitionSpec[D <: EvaluatorDefinition](val def
     evaluator.evaluateCachedLeft(workingMemory, context, data.left) aka message("CachedLeft", valueType, data) must_== data.expected
   }
 
-  private def checkEvaluatorMethodWith2Extractors(valueType: ValueType, extractor: InternalReadAccessor, data: TestData, evaluator: Evaluator) {
+  private def checkEvaluatorMethodWithTwoExtractors(valueType: ValueType, extractor: InternalReadAccessor, data: TestData, evaluator: Evaluator) {
     evaluator.evaluate(workingMemory, extractor, data.left, extractor, data.right) aka message("2 extractors", valueType, data) must_== data.expected
   }
 

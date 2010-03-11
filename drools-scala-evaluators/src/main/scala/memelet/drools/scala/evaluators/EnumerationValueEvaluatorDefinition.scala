@@ -7,7 +7,6 @@ import memelet.drools.scala.NoopExternalizable
 import memelet.drools.scala.evaluators.Evaluators._
 
 class EnumerationValueEvaluatorDefinition extends RichEvaluatorDefinition(Target.FACT)
-        with GetEvaluatorByOperatorIdAndNegated
         with NoopExternalizable {
 
   val IsNamedOperator = registerOperator("isNamed")
@@ -22,7 +21,6 @@ class EnumerationValueEvaluatorDefinition extends RichEvaluatorDefinition(Target
     lazy val evalNullFactValue = false
     
     def eval(factValue: Enumeration#Value, value: String) = factValue.toString == value
-
   }
   
 }
