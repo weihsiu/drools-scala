@@ -13,6 +13,13 @@ object Evaluators {
 
   import EvaluatorDefinition.Target
 
+  class RichOperator(operator: Operator) {
+    def unary_! : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
+    def negated : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
+    def operatorString: String = operator.getOperatorString
+  }
+  implicit def enrichOperator(operator: Operator) = new RichOperator(operator)
+
   //---- EvaluatorDefinition ----
 
   abstract class RichEvaluatorDefinition(target: Target) extends EvaluatorDefinition {
@@ -25,15 +32,12 @@ object Evaluators {
     def registerOperator(operatorId: String, isNegated: Boolean = false): Operator =
       Operator.addOperatorToRegistry(operatorId, isNegated)
 
-    class RichOperator(operator: Operator) {
-      def unary_! : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
-      def negated : Operator = Operator.addOperatorToRegistry(operator.getOperatorString, !operator.isNegated)
-    }
-    implicit def enrichOperator(operator: Operator) = new RichOperator(operator)
-
     private[Evaluators] var evaluators = Set[Evaluator]()
 
-    final def registerEvaluator(evaluator: Evaluator) { evaluators += evaluator }
+    final def registerEvaluator(evaluator: Evaluator) = { evaluators += evaluator; evaluator }
+    final def registerEvaluators(evaluators: Evaluator*) {
+      evaluators.foreach(registerEvaluator _)
+    }
 
     final def getTarget = target
     lazy val isNegatable: Boolean = evaluators exists (_.getOperator.isNegated)
@@ -60,7 +64,9 @@ object Evaluators {
     def getEvaluator(vtype: ValueType, operatorId: String, isNegated: Boolean, parameterText: String, left: Target, right: Target): Evaluator = {
       evaluators find { e =>
         e.getOperator.getOperatorString == operatorId && e.getOperator.isNegated == isNegated
-      } getOrElse (throw new OperatorNotSupportedException(vtype, operatorId, isNegated, parameterText, left, right))
+      } getOrElse {
+        throw new OperatorNotSupportedException(vtype, operatorId, isNegated, parameterText, left, right)
+      }
     }
 
   }
@@ -133,6 +139,5 @@ object Evaluators {
     def unapply(operation: (String, Boolean)): Option[Evaluator] =
       if (operation._1 == getOperator.getOperatorString && operation._2 == getOperator.isNegated) Some(evaluator) else None
   }
-
 
 }

@@ -1,4 +1,4 @@
-package memelet.drools.scala.dsl
+package memelet.drools.scala.dsl.symbol
 
 rule "r1" dialect "mvel"
 when

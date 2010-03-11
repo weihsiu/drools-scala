@@ -3,7 +3,7 @@ package memelet.drools.scala.evaluators
 import org.junit.Test
 import org.drools.base.ValueType
 
-class OptionEvaluatorDefinitionSpec extends EvaluatorDefinitionSpec(new OptionEvaluatorDefinition) {
+class OptionEvaluatorDefinitionSpec extends AbstractEvaluatorDefinitionSpec(new OptionEvaluatorDefinition) {
 
   @Test def validate {
     val data = Seq[TestData](

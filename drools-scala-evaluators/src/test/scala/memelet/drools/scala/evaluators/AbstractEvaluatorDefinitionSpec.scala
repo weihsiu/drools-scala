@@ -9,10 +9,10 @@ import org.drools.rule.VariableRestriction.{ObjectVariableContextEntry, Variable
 import org.drools.base.evaluators.{EvaluatorDefinition, EvaluatorRegistry}
 import org.drools.common.InternalWorkingMemory
 
-abstract class EvaluatorDefinitionSpec(definitionUnderTest: EvaluatorDefinition) extends SpecsMatchers with Mockito {
+abstract class AbstractEvaluatorDefinitionSpec[D <: EvaluatorDefinition](val definition: D) extends SpecsMatchers with Mockito {
 
   val registry = new EvaluatorRegistry
-  registry.addEvaluatorDefinition(definitionUnderTest)
+  registry.addEvaluatorDefinition(definition)
 
   val notPrefix = "not "
 

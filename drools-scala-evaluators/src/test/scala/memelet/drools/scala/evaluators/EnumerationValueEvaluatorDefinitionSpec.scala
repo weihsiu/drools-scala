@@ -3,7 +3,7 @@ package memelet.drools.scala.evaluators
 import org.junit.Test
 import org.drools.base.ValueType
 
-class EnumerationValueEvaluatorDefinitionSpec extends EvaluatorDefinitionSpec(new EnumerationValueEvaluatorDefinition) {
+class EnumerationValueEvaluatorDefinitionSpec extends AbstractEvaluatorDefinitionSpec(new EnumerationValueEvaluatorDefinition) {
 
   object Enum extends Enumeration {
     val V1 = Value("V1")

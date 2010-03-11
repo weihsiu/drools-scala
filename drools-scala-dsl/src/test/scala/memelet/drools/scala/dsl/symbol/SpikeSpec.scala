@@ -1,5 +1,5 @@
-package memelet.drools.scala.dsl
-
+package memelet.drools.scala
+package dsl.symbol
 
 import org.specs.SpecsMatchers
 import org.specs.mock.Mockito
@@ -11,7 +11,6 @@ import org.drools.base._
 import field.ObjectFieldImpl
 import org.drools.spi._
 import org.drools.reteoo.builder.ReteooRuleBuilder
-import memelet.drools.scala.{DroolsDebug, RichDrools, DroolsFixture}
 import org.drools.impl.{KnowledgeBaseImpl, StatefulKnowledgeSessionImpl}
 import org.drools.runtime.StatefulKnowledgeSession
 import org.drools.{KnowledgeBase, KnowledgeBaseFactory, WorkingMemory, RuleBaseConfiguration}
@@ -24,27 +23,21 @@ case class FactTwoX(name: String, f: FactOneX)
 
 class SpikeSpec extends SpecsMatchers with Mockito {
 
-  @Test def dslSpike {
-    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/spike_spec.drl"))
-    import drools._
-    import RichDrools._
-
-    val f1_1 = FactOneX("f1_1")
-    val f1_2 = FactOneX("f1_2")
-    val f2_1 = FactTwoX("f2_1", f1_1)
-    session insert f1_1
-    session insert f1_2
-    session insert f2_1
-    session fireAllRules
-  }
-
-  //--------------------------------------------------------------------------------------------------------------------
-
   val classFieldAccessorStore = new ClassFieldAccessorStore
   classFieldAccessorStore.setClassFieldAccessorCache(new ClassFieldAccessorCache(this.getClass.getClassLoader))
   val evaluatorRegistry = new EvaluatorRegistry
 
-  case class DslRule(
+  
+  class DslPackage(name: String) {
+    val underlying = new Package(name)
+  }
+
+  trait PatternContainer {
+    def nextDeclarationIndex: Int
+    def addPattern(pattern: DslPattern[_]): Unit
+  }
+
+  class DslRule(
           name: String,
           salience: Int = 0,
           agendaGroup: Option[AgendaGroup] = None,
@@ -63,24 +56,41 @@ class SpikeSpec extends SpecsMatchers with Mockito {
 
     implicit val self: DslRule = this
 
+    //TODO How to support arbitray number of patterns?
+    def or[T,U](decl1: DslDeclaration[T], decl2: DslDeclaration[U]): (DslDeclaration[T], DslDeclaration[U]) = {
+      rule.getLhs.getChildren.remove(decl1.underlying.getPattern)
+      rule.getLhs.getChildren.remove(decl2.underlying.getPattern)
+      val orGroup = GroupElementFactory.newOrInstance
+      orGroup.addChild(decl1.underlying.getPattern)
+      orGroup.addChild(decl2.underlying.getPattern)
+      rule.addPattern(orGroup)
+      (decl1, decl2)
+    }
+
+    //----
+
     private val consequenceFacts = new DynamicVariable[Array[InternalFactHandle]](null)
     def facts = consequenceFacts.value
 
     class DslConsequence(f: => Unit) extends Consequence {
       def evaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory) = {
-        consequenceFacts.withValue(knowledgeHelper.getTuple.asInstanceOf[LeftTuple].toFactHandles) {
+        val facts = knowledgeHelper.getTuple.asInstanceOf[LeftTuple].toFactHandles
+        consequenceFacts.withValue(facts) {
           f
         }
       }
     }
 
-    implicit def dslDeclarationToValue[T](dslDeclaration: DslDeclaration[T]) = dslDeclaration.value
-    
+    implicit def dslDeclarationToValue[T](dslDeclaration: DslDeclaration[T]) = {
+      dslDeclaration.value
+    }
+
     def then (f: => Unit) { this.setConsequence(new DslConsequence(f)) }
   }
 
   class DslDeclaration[T](val underlying: Declaration) {
     def value(implicit rule: DslRule): T = {
+      val facts = rule.facts
       val handle = rule.facts(underlying.getPattern.getOffset)
       handle.getObject.asInstanceOf[T]
     }
@@ -94,13 +104,15 @@ class SpikeSpec extends SpecsMatchers with Mockito {
 
     def apply(constraints: (DslPattern[T] => Constraint)*)(implicit rule: DslRule): DslDeclaration[T] = {
       val index = rule.nextDeclarationIndex
-      underlying = new Pattern(index, index, objectType, index.toString)
+      underlying = new Pattern(index, 0, objectType, index.toString)
       declaration = new DslDeclaration(underlying.getDeclaration)
 
       constraints.foreach{ c =>
         underlying.addConstraint(c(this))
       }
 
+      //TODO Need a another way to add children since we don't know the context or nesting
+      // level at this point
       rule.addPattern(underlying)
 
       declaration
@@ -138,81 +150,37 @@ class SpikeSpec extends SpecsMatchers with Mockito {
   object FactOne extends DslPattern[FactOne]
   object FactTwo extends DslPattern[FactTwo]
 
-  private def doStuff(f1: FactOne, f2: FactTwo) { /*...*/ }
-
   //-----------------------------------------------------
-  class RuleX extends DslRule (
-    name = "ruleX")
-  {
+  class RuleX extends DslRule ("ruleX") {
+
     val f1 = FactOne('name ~== "f1_1")
     val f2 = FactTwo('f ~== f1)
 
+    val (f1_1, f1_2) = or (FactOne('name ~== "f1_1"),
+                           FactOne('name ~== "f1_2"))
+
     then {
-      f2.things.filter(_ == "bar")
+      println(">>> f1_1=" + f1_1.value)
+      println(">>> things=" + f2.things.filter(_ == "one"))
     }
   }
   //-----------------------------------------------------
+  
+//  class RuleW extends DslRule ("ruleW") {
+//    val r1 = FactOne when {f=> f.name ~== "f1_1"}
+//    val rz = when[FactOne](f1 => f1.name ~== r1.name)
+//  }
 
   @Test def createFromDsl {
+    import DroolsDsl._
 
     val kbase: KnowledgeBase = KnowledgeBaseFactory.newKnowledgeBase()
-    val rbase = kbase.asInstanceOf[KnowledgeBaseImpl].getRuleBase.asInstanceOf[InternalRuleBase]
+    val rbase = kbase.asInstanceOf[KnowledgeBaseImpl].getRuleBase.asInstanceOf[ReteooRuleBase]
 
-    val reteooBuilder = rbase.getReteooBuilder
-    val ruleBuilder = new ReteooRuleBuilder
-
-    val ruleX = new RuleX
-    ruleBuilder.addRule(ruleX, rbase, reteooBuilder.getIdGenerator)
-
-    val ksession = kbase.newStatefulKnowledgeSession()
-    DroolsDebug.debugWorkingMemory(ksession)
-    DroolsDebug.debugAgenda(ksession)
-
-    val f1_1 = FactOne("f1_1")
-    val f2_1 = FactTwo("f2_1", f1_1)
-    ksession insert f1_1
-    ksession insert f2_1
-    ksession fireAllRules
-    
-  }
-
-  @Test def createKBase {
-
-    case class FactOne(name: String)
-    case class FactTwo(name: String, f: FactOne)
-
-    //---- ---- ---
-
-    val kbase: KnowledgeBase = KnowledgeBaseFactory.newKnowledgeBase()
-    val rbase = kbase.asInstanceOf[KnowledgeBaseImpl].getRuleBase.asInstanceOf[InternalRuleBase]
-
-    val reteooBuilder = rbase.getReteooBuilder
-    val ruleBuilder = new ReteooRuleBuilder
-
-    val rule_1 = new DslRule("rule_1") {
-        val pattern_1 = new DslPattern[FactOne]
-        val pattern_1_decl = pattern_1.apply(
-          LiteralConstraint(_:DslPattern[_])('name, evaluatorRegistry.getEvaluator(ValueType.OBJECT_TYPE, "==", false, null), "f1_1")
-        )
-        addPattern(pattern_1.underlying)
-
-        val pattern_2 = new DslPattern[FactTwo]
-        val pattern_2_decl = pattern_2.apply(
-          LiteralConstraint(_:DslPattern[_])('name, evaluatorRegistry.getEvaluator(ValueType.OBJECT_TYPE, "==", false, null), "f2_1"),
-          VariableConstraint(_:DslPattern[_])('f, evaluatorRegistry.getEvaluator(ValueType.OBJECT_TYPE, "==", false, null), pattern_1_decl.underlying)
-        )
-        addPattern(pattern_2.underlying)
-
-        val consequence = new Consequence {
-          def evaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory) = {
-            println("*** consequence")
-          }
-        }
-        setConsequence(consequence)
+    using(rbase) {
+      val ruleX = new RuleX
+      rbase.addRule(new Package("createFromDsl"), ruleX)
     }
-    ruleBuilder.addRule(rule_1, rbase, reteooBuilder.getIdGenerator)
-
-    //----
 
     val ksession = kbase.newStatefulKnowledgeSession()
     DroolsDebug.debugWorkingMemory(ksession)
@@ -223,8 +191,73 @@ class SpikeSpec extends SpecsMatchers with Mockito {
     ksession insert f1_1
     ksession insert f2_1
     ksession fireAllRules
-
   }
+
+  //=================================================================================================================
+
+  @Test def usingCompiler {
+    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/spike_spec.drl"))
+    import drools._
+    import RichDrools._
+
+    val f1_1 = FactOneX("f1_1")
+    val f1_2 = FactOneX("f1_2")
+    val f2_1 = FactTwoX("f2_1", f1_1)
+    session insert f1_1
+    session insert f1_2
+    session insert f2_1
+    session fireAllRules
+  }
+
+//  @Test def createKBase {
+//
+//    case class FactOne(name: String)
+//    case class FactTwo(name: String, f: FactOne)
+//
+//    //---- ---- ---
+//
+//    val kbase: KnowledgeBase = KnowledgeBaseFactory.newKnowledgeBase()
+//    val rbase = kbase.asInstanceOf[KnowledgeBaseImpl].getRuleBase.asInstanceOf[InternalRuleBase]
+//
+//    val reteooBuilder = rbase.getReteooBuilder
+//    val ruleBuilder = new ReteooRuleBuilder
+//
+//    val rule_1 = new DslRule("rule_1") {
+//        val pattern_1 = new DslPattern[FactOne]
+//        val pattern_1_decl = pattern_1.apply(
+//          LiteralConstraint(_:DslPattern[_])('name, evaluatorRegistry.getEvaluator(ValueType.OBJECT_TYPE, "==", false, null), "f1_1")
+//        )
+//        addPattern(pattern_1.underlying)
+//
+//        val pattern_2 = new DslPattern[FactTwo]
+//        val pattern_2_decl = pattern_2.apply(
+//          LiteralConstraint(_:DslPattern[_])('name, evaluatorRegistry.getEvaluator(ValueType.OBJECT_TYPE, "==", false, null), "f2_1"),
+//          VariableConstraint(_:DslPattern[_])('f, evaluatorRegistry.getEvaluator(ValueType.OBJECT_TYPE, "==", false, null), pattern_1_decl.underlying)
+//        )
+//        addPattern(pattern_2.underlying)
+//
+//        val consequence = new Consequence {
+//          def evaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory) = {
+//            println("*** consequence")
+//          }
+//        }
+//        setConsequence(consequence)
+//    }
+//    ruleBuilder.addRule(rule_1, rbase, reteooBuilder.getIdGenerator)
+//
+//    //----
+//
+//    val ksession = kbase.newStatefulKnowledgeSession()
+//    DroolsDebug.debugWorkingMemory(ksession)
+//    DroolsDebug.debugAgenda(ksession)
+//
+//    val f1_1 = FactOne("f1_1")
+//    val f2_1 = FactTwo("f2_1", f1_1)
+//    ksession insert f1_1
+//    ksession insert f2_1
+//    ksession fireAllRules
+//
+//  }
 
 
 }

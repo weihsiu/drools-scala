@@ -1,6 +1,6 @@
 package memelet.drools.scala.evaluators
 
-import org.drools.base.{BaseEvaluator, ValueType}
+import org.drools.base.ValueType
 import org.drools.base.evaluators.{Operator, EvaluatorDefinition}
 import EvaluatorDefinition.Target
 import memelet.drools.scala.NoopExternalizable
@@ -11,8 +11,10 @@ class OptionEvaluatorDefinition extends RichEvaluatorDefinition(Target.FACT)
         with NoopExternalizable {
 
   val IsSomeOperator = registerOperator("isSome")
-  registerEvaluator(new IsSomeEvaluator(IsSomeOperator))
-  registerEvaluator(new IsSomeEvaluator(IsSomeOperator negated))
+  
+  registerEvaluators(
+    new IsSomeEvaluator(IsSomeOperator),
+    new IsSomeEvaluator(IsSomeOperator negated))
 
   private class IsSomeEvaluator(operator: Operator) extends RichEvaluator[Option[_], Any](ValueType.OBJECT_TYPE, operator)
           with EvaluatorOperationExtractor {

@@ -1,6 +1,6 @@
 package memelet.drools.scala.evaluators
 
-import org.drools.base.{BaseEvaluator, ValueType}
+import org.drools.base.ValueType
 import org.drools.base.evaluators.{Operator, EvaluatorDefinition}
 import EvaluatorDefinition.Target
 import memelet.drools.scala.NoopExternalizable
@@ -11,8 +11,10 @@ class EnumerationValueEvaluatorDefinition extends RichEvaluatorDefinition(Target
         with NoopExternalizable {
 
   val IsNamedOperator = registerOperator("isNamed")
-  registerEvaluator(new IsNamedEvaluator(IsNamedOperator))
-  registerEvaluator(new IsNamedEvaluator(IsNamedOperator negated))
+
+  registerEvaluators(
+    new IsNamedEvaluator(IsNamedOperator),
+    new IsNamedEvaluator(IsNamedOperator negated))
 
   private class IsNamedEvaluator(operator: Operator) extends RichEvaluator[Enumeration#Value, String](ValueType.OBJECT_TYPE, operator)
           with EvaluatorOperationExtractor {
