@@ -21,6 +21,7 @@ package memelet.drools.scala {
 
   class CompositeClock(private val droolsClock: PseudoClockScheduler) {
 
+    // Inject the drools millis provider into jodatime
     val cMillisProvider = classOf[DateTimeUtils].getDeclaredField("cMillisProvider")
     cMillisProvider.setAccessible(true)
     cMillisProvider.set(null, new DroolsMillisProvider(droolsClock))

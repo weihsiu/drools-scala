@@ -134,6 +134,9 @@ object Evaluators {
       if (right == null && !evalNullFactValue)
         false
       else {
+        //TODO This used to be context.declaration.getExtractor... but that caused production rules to fail. Changing it 
+        // to context.extractor... fixed those problems but did not cause any unit tests to fail. (I don't really understand
+        // this code very well and was expermenting). Need to figure out what the unit tests are missing. 
         val factValue = context.extractor.getValue(workingMemory, right)
         val otherValue = context.asInstanceOf[ObjectVariableContextEntry].left
         isNegated ^ eval(factValue, otherValue)

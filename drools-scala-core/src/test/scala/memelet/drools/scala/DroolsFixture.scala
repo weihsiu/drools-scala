@@ -4,6 +4,7 @@ import org.drools.runtime.StatefulKnowledgeSession
 import org.drools.conf.EventProcessingOption
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.event.rule._
+import scala.collection.mutable
 
 object DroolsFixture {
 
@@ -29,13 +30,19 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
             .statefulSession(ClockTypeOption.get("pseudo"))
   }
 
+  val clock = new CompositeClock(session.getSessionClock())
+
+  var rulesFired = Set[String]()
   session.onAfterActivationFired{ e: AfterActivationFiredEvent =>
     rulesFired += e.getActivation.getRule.getName
   }
 
-  val clock = new CompositeClock(session.getSessionClock())
-
-  var rulesFired = Set[String]()
+  var factEvents = Vector[WorkingMemoryEvent]()
+  session addEventListener new WorkingMemoryEventListener {
+    def objectInserted(e: ObjectInsertedEvent) = factEvents = factEvents.appendBack(e)
+    def objectRetracted(e: ObjectRetractedEvent) = factEvents = factEvents.appendBack(e)
+    def objectUpdated(e: ObjectUpdatedEvent) = factEvents = factEvents.appendBack(e)
+  }
 
   setup(session)
 
@@ -51,9 +58,9 @@ trait DroolsDebug {
   
   def debugWorkingMemory(session: StatefulKnowledgeSession) {
     session addEventListener new WorkingMemoryEventListener {
-      def objectInserted(e: ObjectInsertedEvent) = log("on-insert (%s)".format(e.getObject.toString))
-      def objectRetracted(e: ObjectRetractedEvent) = log("on-retract (%s)".format(e.getOldObject.toString))
-      def objectUpdated(e: ObjectUpdatedEvent) = log("on-update (%s)".format(e.getObject.toString))
+      def objectInserted(e: ObjectInsertedEvent) = log("on-insert (%s)".format(e.getObject))
+      def objectRetracted(e: ObjectRetractedEvent) = log("on-retract (%s)".format(e.getOldObject))
+      def objectUpdated(e: ObjectUpdatedEvent) = log("on-update (%s -> %s)".format(e.getOldObject, e.getObject))
     }
   }
 

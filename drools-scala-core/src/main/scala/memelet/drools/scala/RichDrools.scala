@@ -1,5 +1,15 @@
 package memelet.drools.scala
 
+import _root_.java.lang.String
+import _root_.java.util.IdentityHashMap
+import _root_.org.drools._
+import common.DefaultAgenda
+import rule.Declaration
+import _root_.org.drools.runtime.rule.impl.AgendaImpl
+import _root_.org.drools.base.DefaultKnowledgeHelper
+import _root_.org.drools.impl.StatefulKnowledgeSessionImpl
+import _root_.org.drools.runtime.rule.{WorkingMemoryEntryPoint, AgendaFilter, FactHandle}
+import _root_.org.drools.spi.{Activation, KnowledgeHelper}
 import org.drools.io.{ResourceFactory, Resource}
 import org.drools.runtime.conf.ClockTypeOption
 import java.util.concurrent.TimeUnit
@@ -10,8 +20,6 @@ import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
 import org.drools.conf.{KnowledgeBaseOption}
 import org.joda.time.{Period, DateTime, DateTimeUtils}
-import org.drools.{FactException, KnowledgeBaseFactory, KnowledgeBase}
-import org.drools.runtime.rule.{AgendaFilter, FactHandle}
 import org.drools.builder.impl.KnowledgeBuilderImpl
 import org.drools.builder.{KnowledgeBuilder, ResourceType, KnowledgeBuilderFactory}
 import org.drools.util.ChainedProperties
@@ -96,6 +104,8 @@ object RichDrools {
   implicit def enrichSession(ksession: StatefulKnowledgeSession): RichStatefulKnowledgeSession = new RichStatefulKnowledgeSession(ksession)
   implicit def derichSession(rksession: RichStatefulKnowledgeSession): StatefulKnowledgeSession = rksession.session
 
+  implicit def enrichWorkingMemoryEntryPoint(ep: WorkingMemoryEntryPoint): RichWorkingMemoryEntryPoint = new RichWorkingMemoryEntryPoint(ep)
+
   implicit def enrichGlobals(globals: Globals): RichGlobals = new RichGlobals(globals)
   implicit def enrichSessionPseudoClock(clock: SessionPseudoClock): RichSessionPseudoClock = new RichSessionPseudoClock(clock)
   
@@ -114,9 +124,68 @@ class RichKnowledgeBase(val kbase: KnowledgeBase) {
     ksessionConfig.setOption(clockType)
     val ksession: StatefulKnowledgeSession = kbase.newStatefulKnowledgeSession(ksessionConfig, null)
     ScalaExtensions.setScalaGlobals(ksession)
+    extendKnowledgeHelper(ksession)
     ksession
   }
 
+  // DO some really nasty reflection to extend the hard-coded DefaultKnowledgeHelper. This will
+  // almost certainly only work for "mvel" consequences.
+  private def extendKnowledgeHelper(ksession: StatefulKnowledgeSession) {
+    val agenda = ksession.getAgenda
+    val agendaImplField = classOf[AgendaImpl].getDeclaredField("agenda")
+    agendaImplField.setAccessible(true)
+    val defaultAgenda = agendaImplField.get(agenda).asInstanceOf[DefaultAgenda]
+
+    val knowledgeHelperField = classOf[DefaultAgenda].getDeclaredField("knowledgeHelper")
+    knowledgeHelperField.setAccessible(true)
+    val knowledgeHelper = knowledgeHelperField.get(defaultAgenda).asInstanceOf[DefaultKnowledgeHelper]
+
+    val knowledgeHelperExt = new DefaultKnowledgeHelperExt(knowledgeHelper)
+    knowledgeHelperField.set(defaultAgenda, knowledgeHelperExt)
+  }
+
+}
+
+class DefaultKnowledgeHelperExt(kh: DefaultKnowledgeHelper) extends KnowledgeHelper {
+
+  import org.drools.FactHandle
+
+  def workingMemory = kh.getWorkingMemory
+  def handle(fact: Object) = workingMemory.getFactHandle(fact)
+  def entryPoint(name: String) = kh.getEntryPoint(name)
+  def update(oldFact: Object, newFact: Object) = kh.update(handle(oldFact), newFact)
+
+  //----
+
+  def setIdentityMap(identityMap: IdentityHashMap[Object, FactHandle]) = kh.setIdentityMap(identityMap)
+  def getIdentityMap = kh.getIdentityMap
+  def halt = kh.halt
+  def getDeclaration(identifier: String) = kh.getDeclaration(identifier)
+  def setFocus(focus: String) = kh.setFocus(focus)
+  def getExitPoints = kh.getExitPoints
+  def getExitPoint(id: String) = kh.getExitPoint(id)
+  def getEntryPoints = kh.getEntryPoints
+  def getEntryPoint(id: String) = kh.getEntryPoint(id)
+  def getWorkingMemory = kh.getWorkingMemory
+  def getTuple = kh.getTuple
+  def get(declaration: Declaration) = kh.get(declaration)
+  def modifyInsert(factHandle: FactHandle, `object` : Any) = kh.modifyInsert(factHandle, `object`)
+  def modifyInsert(`object` : Any) = kh.modifyInsert(`object`)
+  def modifyRetract(factHandle: FactHandle) = kh.modifyRetract(factHandle)
+  def modifyRetract(`object` : Any) = kh.modifyRetract(`object`)
+  def retract(`object` : Any) = kh.retract(`object`)
+  def retract(handle: FactHandle) = kh.retract(handle)
+  def update(newObject: Any) = kh.update(newObject)
+  def update(handle: FactHandle, newObject: Any) = kh.update(handle, newObject)
+  def insertLogical(`object` : Any, dynamic: Boolean) = kh.insertLogical(`object`, dynamic)
+  def insert(`object` : Any, dynamic: Boolean) = kh.insert(`object`, dynamic)
+  def insertLogical(`object` : Any) = kh.insertLogical(`object`)
+  def insert(`object` : Any) = kh.insert(`object`)
+  def reset = kh.reset
+  def getActivation = kh.getActivation
+  def getRule = kh.getRule
+  def setActivation(agendaItem: Activation) = kh.setActivation(agendaItem)
+  def getKnowledgeRuntime = kh.getKnowledgeRuntime
 }
 
 class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
@@ -265,6 +334,15 @@ class RichGlobals(globals: Globals) {
       case _ => throw new NoSuchElementException("Global not found: " + identifier)
     }
 }
+
+class RichWorkingMemoryEntryPoint(ep: WorkingMemoryEntryPoint) {
+
+  def update(oldFact: Object, newFact: Object) {
+    ep.update(ep.getFactHandle(oldFact), newFact)
+  }
+
+}
+
 
 class RichSessionPseudoClock(clock: SessionPseudoClock) {
 

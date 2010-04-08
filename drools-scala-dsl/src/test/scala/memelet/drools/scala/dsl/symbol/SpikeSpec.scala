@@ -79,6 +79,8 @@ class SpikeSpec extends SpecsMatchers with Mockito {
           f
         }
       }
+
+      def getName = "<function>"
     }
 
     implicit def dslDeclarationToValue[T](dslDeclaration: DslDeclaration[T]) = {
@@ -196,7 +198,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
   //=================================================================================================================
 
   @Test def usingCompiler {
-    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/spike_spec.drl"))
+    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/symbol/spike_spec.drl"))
     import drools._
     import RichDrools._
 
