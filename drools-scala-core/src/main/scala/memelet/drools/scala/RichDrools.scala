@@ -1,28 +1,28 @@
 package memelet.drools.scala
 
-import _root_.java.lang.String
-import _root_.java.util.IdentityHashMap
-import _root_.org.drools._
-import common.DefaultAgenda
-import rule.Declaration
-import _root_.org.drools.runtime.rule.impl.AgendaImpl
-import _root_.org.drools.base.DefaultKnowledgeHelper
-import _root_.org.drools.impl.StatefulKnowledgeSessionImpl
-import _root_.org.drools.runtime.rule.{WorkingMemoryEntryPoint, AgendaFilter, FactHandle}
-import _root_.org.drools.spi.{Activation, KnowledgeHelper}
-import org.drools.io.{ResourceFactory, Resource}
-import org.drools.runtime.conf.ClockTypeOption
+import java.util.IdentityHashMap
 import java.util.concurrent.TimeUnit
-import org.drools.definition.KnowledgePackage
 import scala.collection.JavaConversions._
+import org.joda.time.{Period, DateTime, DateTimeUtils}
+import org.drools.common.{InternalFactHandle, DefaultAgenda}
+//
+import org.drools.{FactException, KnowledgeBase, KnowledgeBaseFactory}
+import org.drools.base.DefaultKnowledgeHelper
+//import org.drools.util.ChainedProperties
 import org.drools.event.rule._
-import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
 import org.drools.conf.{KnowledgeBaseOption}
-import org.joda.time.{Period, DateTime, DateTimeUtils}
+import org.drools.rule.Declaration
+import org.drools.runtime.rule.impl.AgendaImpl
+import org.drools.runtime.rule.{WorkingMemoryEntryPoint, AgendaFilter, FactHandle}
+import org.drools.runtime.conf.ClockTypeOption
+import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
+//import org.drools.impl.StatefulKnowledgeSessionImpl
+import org.drools.spi.{Activation, KnowledgeHelper}
+import org.drools.io.{ResourceFactory, Resource}
+import org.drools.definition.KnowledgePackage
 import org.drools.builder.impl.KnowledgeBuilderImpl
 import org.drools.builder.{KnowledgeBuilder, ResourceType, KnowledgeBuilderFactory}
-import org.drools.util.ChainedProperties
 import org.drools.builder.conf.EvaluatorOption
 
 private[scala] object ScalaExtensions {
@@ -65,7 +65,7 @@ object DroolsBuilder {
     }
 
     if (kbuilder.hasErrors) {
-      throw new RuntimeException(kbuilder.getErrors.toString)
+      throw new RuntimeException(kbuilder.getErrors.mkString(","))
     }
     kbuilder.getKnowledgePackages
   }
@@ -108,6 +108,13 @@ object RichDrools {
 
   implicit def enrichGlobals(globals: Globals): RichGlobals = new RichGlobals(globals)
   implicit def enrichSessionPseudoClock(clock: SessionPseudoClock): RichSessionPseudoClock = new RichSessionPseudoClock(clock)
+
+  implicit def anyToFactHandle(fact: AnyRef)(implicit ksession: StatefulKnowledgeSession) = new {
+    def factHandle: FactHandle = {
+      val h = ksession.getFactHandle(fact)
+      h
+    }
+  }
   
   val REALTIME_CLOCK_OPTION: ClockTypeOption = ClockTypeOption.get("realtime")
   val PSUEDO_CLOCK_OPTION: ClockTypeOption = ClockTypeOption.get("pseudo")
@@ -124,7 +131,7 @@ class RichKnowledgeBase(val kbase: KnowledgeBase) {
     ksessionConfig.setOption(clockType)
     val ksession: StatefulKnowledgeSession = kbase.newStatefulKnowledgeSession(ksessionConfig, null)
     ScalaExtensions.setScalaGlobals(ksession)
-    extendKnowledgeHelper(ksession)
+//    extendKnowledgeHelper(ksession)
     ksession
   }
 
@@ -140,20 +147,32 @@ class RichKnowledgeBase(val kbase: KnowledgeBase) {
     knowledgeHelperField.setAccessible(true)
     val knowledgeHelper = knowledgeHelperField.get(defaultAgenda).asInstanceOf[DefaultKnowledgeHelper]
 
-    val knowledgeHelperExt = new DefaultKnowledgeHelperExt(knowledgeHelper)
+    val knowledgeHelperExt = new DefaultKnowledgeHelperExt(knowledgeHelper, ksession)
     knowledgeHelperField.set(defaultAgenda, knowledgeHelperExt)
   }
 
 }
 
-class DefaultKnowledgeHelperExt(kh: DefaultKnowledgeHelper) extends KnowledgeHelper {
+class DefaultKnowledgeHelperExt(kh: DefaultKnowledgeHelper, ksession: StatefulKnowledgeSession) extends KnowledgeHelper {
 
   import org.drools.FactHandle
-
-  def workingMemory = kh.getWorkingMemory
-  def handle(fact: Object) = workingMemory.getFactHandle(fact)
-  def entryPoint(name: String) = kh.getEntryPoint(name)
-  def update(oldFact: Object, newFact: Object) = kh.update(handle(oldFact), newFact)
+  
+//  private val getFactHandle = new Function1[Object,FactHandle] {
+//    val getMethod = classOf[DefaultKnowledgeHelper].getDeclaredMethod("getFactHandle", Array(classOf[Object]))
+//    getMethod.setAccessible(true)
+//
+//    def apply(fact: Object) = {
+//      getMethod.invoke(kh, Array(fact)).asInstanceOf[FactHandle]
+//    }
+//  }
+//
+//  def handle(fact: Object) = getFactHandle(fact)
+//  def entryPoint(name: String) = kh.getEntryPoint(name)
+//  def update(oldFact: Object, newFact: Object) = {
+//    val fh = getFactHandle(oldFact)
+//    val fhi = ksession.getFactHandle(oldFact)
+//    kh.update(handle(oldFact), newFact)
+//  }
 
   //----
 
@@ -188,6 +207,8 @@ class DefaultKnowledgeHelperExt(kh: DefaultKnowledgeHelper) extends KnowledgeHel
   def getKnowledgeRuntime = kh.getKnowledgeRuntime
 }
 
+
+//TODO Clean this up. Make it consistent with RichEntryPoint
 class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
 
   def knowledgeBase = session.getKnowledgeBase
@@ -222,7 +243,9 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
     }
   }
 
-  def updateFact (fact: AnyRef) {
+  //TODO WTF, what does it mean to insert a handle. Also is this inteded
+  // for mutable facts?
+  def update (fact: AnyRef) {
     session.getFactHandle(fact) match {
       case handle: FactHandle => session insert handle
       case null => throw new FactException("Fact handle not found: " + fact)
@@ -304,6 +327,28 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
   }
 }
 
+class RichWorkingMemoryEntryPoint(ep: WorkingMemoryEntryPoint) {
+
+  def handleOf(fact: AnyRef): FactHandle = {
+    ep.getFactHandle(fact) match {
+      case handle: FactHandle => handle
+      case null => throw new FactException("Fact handle not found")
+    }
+  }
+
+  def update(oldFact: Object, newFact: Object) {
+    ep.update(handleOf(oldFact), newFact)
+  }
+
+  def facts[T: Manifest]: Set[T] = {
+    val filter = new ObjectFilter() {
+      def accept(obj: AnyRef) = manifest[T].erasure.isAssignableFrom(obj.getClass)
+    }
+    Set.empty[T] ++ (for (obj <- ep.getObjects(filter)) yield obj.asInstanceOf[T])
+  }
+
+}
+
 class RichGlobals(globals: Globals) {
 
   def + (elem: (String, AnyRef)): RichGlobals = {
@@ -334,15 +379,6 @@ class RichGlobals(globals: Globals) {
       case _ => throw new NoSuchElementException("Global not found: " + identifier)
     }
 }
-
-class RichWorkingMemoryEntryPoint(ep: WorkingMemoryEntryPoint) {
-
-  def update(oldFact: Object, newFact: Object) {
-    ep.update(ep.getFactHandle(oldFact), newFact)
-  }
-
-}
-
 
 class RichSessionPseudoClock(clock: SessionPseudoClock) {
 

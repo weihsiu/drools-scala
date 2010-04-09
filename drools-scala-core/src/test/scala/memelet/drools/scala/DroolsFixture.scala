@@ -15,13 +15,14 @@ object DroolsFixture {
     facts.foreach(fact => session insert fact)
   })
 
+  def clock =
 }
 
 class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) extends DroolsDebug {
 
   import RichDrools._
 
-  val session: RichStatefulKnowledgeSession = {
+  val session: StatefulKnowledgeSession = {
     System.setProperty("drools.dialect.java.lngLevel", "1.6");
     System.setProperty("drools.dialect.mvel.strict", "false") //default=true
     System.setProperty("drools.dialect.mvel.langLevel", "4")  //default=4
@@ -45,6 +46,8 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
   }
 
   setup(session)
+
+  def fireRules = session.fireAllRules
 
   def debugWorkingMemory(): Unit = debugWorkingMemory(session)
   def debugAgenda(): Unit = debugAgenda(session: StatefulKnowledgeSession)
