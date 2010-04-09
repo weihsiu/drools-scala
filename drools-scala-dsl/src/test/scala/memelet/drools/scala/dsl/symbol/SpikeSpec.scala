@@ -5,7 +5,6 @@ import org.specs.SpecsMatchers
 import org.specs.mock.Mockito
 import org.drools.rule.VariableRestriction.{ObjectVariableContextEntry, VariableContextEntry}
 import org.drools.base.evaluators.{EvaluatorDefinition, EvaluatorRegistry}
-import org.junit.Test
 import org.drools.rule._
 import org.drools.base._
 import field.ObjectFieldImpl
@@ -17,6 +16,7 @@ import org.drools.{KnowledgeBase, KnowledgeBaseFactory, WorkingMemory, RuleBaseC
 import org.drools.reteoo.{LeftTuple, ReteooStatefulSession, ReteooBuilder, ReteooRuleBase}
 import org.drools.common.{InternalFactHandle, InternalRuleBase, InternalWorkingMemory}
 import util.DynamicVariable
+import org.junit.{Ignore, Test}
 
 case class FactOneX(name: String)
 case class FactTwoX(name: String, f: FactOneX)
@@ -173,7 +173,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
 //    val rz = when[FactOne](f1 => f1.name ~== r1.name)
 //  }
 
-  @Test def createFromDsl {
+  @Ignore @Test def createFromDsl {
     import DroolsDsl._
 
     val kbase: KnowledgeBase = KnowledgeBaseFactory.newKnowledgeBase()

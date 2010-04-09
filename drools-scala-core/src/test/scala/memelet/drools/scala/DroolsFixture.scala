@@ -4,7 +4,6 @@ import org.drools.runtime.StatefulKnowledgeSession
 import org.drools.conf.EventProcessingOption
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.event.rule._
-import scala.collection.mutable
 
 object DroolsFixture {
 
@@ -15,14 +14,13 @@ object DroolsFixture {
     facts.foreach(fact => session insert fact)
   })
 
-  def clock =
 }
 
 class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) extends DroolsDebug {
 
   import RichDrools._
 
-  val session: StatefulKnowledgeSession = {
+  implicit val session: StatefulKnowledgeSession = {
     System.setProperty("drools.dialect.java.lngLevel", "1.6");
     System.setProperty("drools.dialect.mvel.strict", "false") //default=true
     System.setProperty("drools.dialect.mvel.langLevel", "4")  //default=4
