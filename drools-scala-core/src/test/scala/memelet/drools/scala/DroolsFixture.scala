@@ -1,22 +1,12 @@
 package memelet.drools.scala
 
-import org.drools.runtime.StatefulKnowledgeSession
 import org.drools.conf.EventProcessingOption
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.event.rule._
+import org.drools.runtime.{ObjectFilter, StatefulKnowledgeSession}
 
-object DroolsFixture {
-
-  import RichDrools._
-
-  def apply(rules: Seq[String], globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty) = new DroolsFixture(rules, (session: StatefulKnowledgeSession) => {
-    globals.foreach(global => session addGlobal (global._1, global._2))
-    facts.foreach(fact => session insert fact)
-  })
-
-}
-
-class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) extends DroolsDebug {
+case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty,
+        debug: Boolean = false) extends DroolsDebug {
 
   import RichDrools._
 
@@ -25,9 +15,17 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
     System.setProperty("drools.dialect.mvel.strict", "false") //default=true
     System.setProperty("drools.dialect.mvel.langLevel", "4")  //default=4
     DroolsBuilder
-            .buildKnowledgeBase(DroolsBuilder.buildKnowledgePackages(drls), EventProcessingOption.STREAM)
+            .buildKnowledgeBase(DroolsBuilder.buildKnowledgePackages(rules), EventProcessingOption.STREAM)
             .statefulSession(ClockTypeOption.get("pseudo"))
   }
+
+  if (debug) {
+    debugWorkingMemory
+    debugAgenda
+  }
+
+  globals.foreach(global => session addGlobal (global._1, global._2))
+  facts.foreach(fact => session insert fact)
 
   val clock = new CompositeClock(session.getSessionClock())
 
@@ -43,7 +41,12 @@ class DroolsFixture(drls: Seq[String], setup: StatefulKnowledgeSession => Unit) 
     def objectUpdated(e: ObjectUpdatedEvent) = factEvents = factEvents.appendBack(e)
   }
 
-  setup(session)
+  def events[T: Manifest]: Seq[T] = {
+    Seq.empty[T] ++ (for {
+      event <- factEvents
+      if (manifest[T].erasure.isAssignableFrom(event.getClass))
+    } yield event.asInstanceOf[T])
+  }
 
   def fireRules = session.fireAllRules
 
