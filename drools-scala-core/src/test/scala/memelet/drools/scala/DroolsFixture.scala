@@ -29,9 +29,9 @@ case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.e
 
   val clock = new CompositeClock(session.getSessionClock())
 
-  var rulesFired = Set[String]()
+  var rulesFired = List[String]()
   session.onAfterActivationFired{ e: AfterActivationFiredEvent =>
-    rulesFired += e.getActivation.getRule.getName
+    rulesFired = e.getActivation.getRule.getName :: rulesFired
   }
 
   var factEvents = Vector[WorkingMemoryEvent]()
