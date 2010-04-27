@@ -6,7 +6,7 @@ import org.drools.event.rule._
 import org.drools.runtime.{ObjectFilter, StatefulKnowledgeSession}
 
 case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty,
-        debug: Boolean = false) extends DroolsDebug {
+        debug: Boolean = false) {
 
   import RichDrools._
 
@@ -50,37 +50,13 @@ case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.e
 
   def fireRules = session.fireAllRules
 
-  def debugWorkingMemory(): Unit = debugWorkingMemory(session)
-  def debugAgenda(): Unit = debugAgenda(session: StatefulKnowledgeSession)
+  def debugWorkingMemory(): Unit = DroolsDebug.debugWorkingMemory(session)
+  def debugAgenda(): Unit = DroolsDebug.debugAgenda(session)
 
 }
 
-object DroolsDebug extends DroolsDebug
-trait DroolsDebug {
-
+object DroolsDebug extends DroolsLogging {
   def log(message: String): Unit = println(message)
-  
-  def debugWorkingMemory(session: StatefulKnowledgeSession) {
-    session addEventListener new WorkingMemoryEventListener {
-      def objectInserted(e: ObjectInsertedEvent) = log("on-insert (%s)".format(e.getObject))
-      def objectRetracted(e: ObjectRetractedEvent) = log("on-retract (%s)".format(e.getOldObject))
-      def objectUpdated(e: ObjectUpdatedEvent) = log("on-update (%s -> %s)".format(e.getOldObject, e.getObject))
-    }
-  }
-
-  def debugAgenda(session: StatefulKnowledgeSession) {
-    session addEventListener new DebugAgendaEventListener {
-      def p(name: String, e: ActivationEvent) = log("on-%s (%s)".format(name, e.getActivation.getRule.getName))
-      def p(name: String, e: AgendaGroupEvent) = log("on-%s (%s)".format(name, e.getAgendaGroup.getName))
-      override def activationCreated(e: ActivationCreatedEvent) = p("activated", e)
-      override def activationCancelled(e: ActivationCancelledEvent) = p("cancelled", e)
-      override def afterActivationFired(e: AfterActivationFiredEvent) = p("after", e)
-      override def beforeActivationFired(e: BeforeActivationFiredEvent) = p("before", e)
-      override def agendaGroupPopped(e: AgendaGroupPoppedEvent) = p("popped", e)
-      override def agendaGroupPushed(e: AgendaGroupPushedEvent) = p("pushed", e)
-    }
-  }
-
 }
 
 

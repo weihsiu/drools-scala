@@ -1,24 +1,16 @@
 package memelet.drools.scala
 
-import java.util.IdentityHashMap
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConversions._
 import org.joda.time.{Period, DateTime, DateTimeUtils}
-import org.drools.common.{InternalFactHandle, DefaultAgenda}
 //
 import org.drools.{FactException, KnowledgeBase, KnowledgeBaseFactory}
-import org.drools.base.DefaultKnowledgeHelper
-//import org.drools.util.ChainedProperties
 import org.drools.event.rule._
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
 import org.drools.conf.{KnowledgeBaseOption}
-import org.drools.rule.Declaration
-import org.drools.runtime.rule.impl.AgendaImpl
 import org.drools.runtime.rule.{WorkingMemoryEntryPoint, AgendaFilter, FactHandle}
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
-//import org.drools.impl.StatefulKnowledgeSessionImpl
-import org.drools.spi.{Activation, KnowledgeHelper}
 import org.drools.io.{ResourceFactory, Resource}
 import org.drools.definition.KnowledgePackage
 import org.drools.builder.impl.KnowledgeBuilderImpl
@@ -131,84 +123,12 @@ class RichKnowledgeBase(val kbase: KnowledgeBase) {
     ksessionConfig.setOption(clockType)
     val ksession: StatefulKnowledgeSession = kbase.newStatefulKnowledgeSession(ksessionConfig, null)
     ScalaExtensions.setScalaGlobals(ksession)
-//    extendKnowledgeHelper(ksession)
     ksession
   }
 
-  // DO some really nasty reflection to extend the hard-coded DefaultKnowledgeHelper. This will
-  // almost certainly only work for "mvel" consequences.
-  private def extendKnowledgeHelper(ksession: StatefulKnowledgeSession) {
-    val agenda = ksession.getAgenda
-    val agendaImplField = classOf[AgendaImpl].getDeclaredField("agenda")
-    agendaImplField.setAccessible(true)
-    val defaultAgenda = agendaImplField.get(agenda).asInstanceOf[DefaultAgenda]
-
-    val knowledgeHelperField = classOf[DefaultAgenda].getDeclaredField("knowledgeHelper")
-    knowledgeHelperField.setAccessible(true)
-    val knowledgeHelper = knowledgeHelperField.get(defaultAgenda).asInstanceOf[DefaultKnowledgeHelper]
-
-    val knowledgeHelperExt = new DefaultKnowledgeHelperExt(knowledgeHelper, ksession)
-    knowledgeHelperField.set(defaultAgenda, knowledgeHelperExt)
-  }
-
 }
 
-class DefaultKnowledgeHelperExt(kh: DefaultKnowledgeHelper, ksession: StatefulKnowledgeSession) extends KnowledgeHelper {
-
-  import org.drools.FactHandle
-  
-//  private val getFactHandle = new Function1[Object,FactHandle] {
-//    val getMethod = classOf[DefaultKnowledgeHelper].getDeclaredMethod("getFactHandle", Array(classOf[Object]))
-//    getMethod.setAccessible(true)
-//
-//    def apply(fact: Object) = {
-//      getMethod.invoke(kh, Array(fact)).asInstanceOf[FactHandle]
-//    }
-//  }
-//
-//  def handle(fact: Object) = getFactHandle(fact)
-//  def entryPoint(name: String) = kh.getEntryPoint(name)
-//  def update(oldFact: Object, newFact: Object) = {
-//    val fh = getFactHandle(oldFact)
-//    val fhi = ksession.getFactHandle(oldFact)
-//    kh.update(handle(oldFact), newFact)
-//  }
-
-  //----
-
-  def setIdentityMap(identityMap: IdentityHashMap[Object, FactHandle]) = kh.setIdentityMap(identityMap)
-  def getIdentityMap = kh.getIdentityMap
-  def halt = kh.halt
-  def getDeclaration(identifier: String) = kh.getDeclaration(identifier)
-  def setFocus(focus: String) = kh.setFocus(focus)
-  def getExitPoints = kh.getExitPoints
-  def getExitPoint(id: String) = kh.getExitPoint(id)
-  def getEntryPoints = kh.getEntryPoints
-  def getEntryPoint(id: String) = kh.getEntryPoint(id)
-  def getWorkingMemory = kh.getWorkingMemory
-  def getTuple = kh.getTuple
-  def get(declaration: Declaration) = kh.get(declaration)
-  def modifyInsert(factHandle: FactHandle, `object` : Any) = kh.modifyInsert(factHandle, `object`)
-  def modifyInsert(`object` : Any) = kh.modifyInsert(`object`)
-  def modifyRetract(factHandle: FactHandle) = kh.modifyRetract(factHandle)
-  def modifyRetract(`object` : Any) = kh.modifyRetract(`object`)
-  def retract(`object` : Any) = kh.retract(`object`)
-  def retract(handle: FactHandle) = kh.retract(handle)
-  def update(newObject: Any) = kh.update(newObject)
-  def update(handle: FactHandle, newObject: Any) = kh.update(handle, newObject)
-  def insertLogical(`object` : Any, dynamic: Boolean) = kh.insertLogical(`object`, dynamic)
-  def insert(`object` : Any, dynamic: Boolean) = kh.insert(`object`, dynamic)
-  def insertLogical(`object` : Any) = kh.insertLogical(`object`)
-  def insert(`object` : Any) = kh.insert(`object`)
-  def reset = kh.reset
-  def getActivation = kh.getActivation
-  def getRule = kh.getRule
-  def setActivation(agendaItem: Activation) = kh.setActivation(agendaItem)
-  def getKnowledgeRuntime = kh.getKnowledgeRuntime
-}
-
-
-//TODO Clean this up. Make it consistent with RichEntryPoint
+//TODO DRY with RichWorkingMemoryEntryPoint
 class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
 
   def knowledgeBase = session.getKnowledgeBase
@@ -243,13 +163,8 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
     }
   }
 
-  //TODO WTF, what does it mean to insert a handle. Also is this inteded
-  // for mutable facts?
-  def update (fact: AnyRef) {
-    session.getFactHandle(fact) match {
-      case handle: FactHandle => session insert handle
-      case null => throw new FactException("Fact handle not found: " + fact)
-    }
+  def update(oldFact: Object, newFact: Object) {
+    session.update(handleOf(oldFact), newFact)
   }
 
   def insertOrUpdate (fact: AnyRef): FactHandle = {
@@ -265,10 +180,6 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
       case null => throw new FactException("Fact handle not found: " + fact)
     }
   }
-
-  def fire() = session.fireAllRules()
-  def fire(max: Int) = session.fireAllRules(max)
-  def fire(filter: AgendaFilter) = session.fireAllRules(filter)
 
   def facts[T: Manifest]: Set[T] = {
     val filter = new ObjectFilter() {
@@ -325,8 +236,14 @@ class RichStatefulKnowledgeSession(val session: StatefulKnowledgeSession) {
       override def beforeActivationFired(e: BeforeActivationFiredEvent) = f(e)
     }
   }
+
+  def fire() = session.fireAllRules()
+  def fire(max: Int) = session.fireAllRules(max)
+  def fire(filter: AgendaFilter) = session.fireAllRules(filter)
+
 }
 
+//TODO DRY with RichStatefulKnowledgeSession
 class RichWorkingMemoryEntryPoint(ep: WorkingMemoryEntryPoint) {
 
   def handleOf(fact: AnyRef): FactHandle = {
@@ -338,6 +255,13 @@ class RichWorkingMemoryEntryPoint(ep: WorkingMemoryEntryPoint) {
 
   def update(oldFact: Object, newFact: Object) {
     ep.update(handleOf(oldFact), newFact)
+  }
+
+  def insertOrUpdate (fact: AnyRef): FactHandle = {
+    ep.getFactHandle(fact) match {
+      case handle: FactHandle => {ep insert handle; handle}
+      case fact => ep insert fact
+    }
   }
 
   def facts[T: Manifest]: Set[T] = {
