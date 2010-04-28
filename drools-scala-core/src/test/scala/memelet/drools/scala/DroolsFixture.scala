@@ -4,6 +4,8 @@ import org.drools.conf.EventProcessingOption
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.event.rule._
 import org.drools.runtime.{ObjectFilter, StatefulKnowledgeSession}
+import org.drools.time.SessionPseudoClock
+import java.util.concurrent.TimeUnit
 
 case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty,
         debug: Boolean = false) {
@@ -27,7 +29,9 @@ case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.e
   globals.foreach(global => session addGlobal (global._1, global._2))
   facts.foreach(fact => session insert fact)
 
-  val clock = new CompositeClock(session.getSessionClock())
+  val sessionClock = session.getSessionClock.asInstanceOf[SessionPseudoClock]
+  def advanceTimeMillis(millis: Long) = sessionClock.advanceTime(millis, TimeUnit.MILLISECONDS)
+  
 
   var rulesFired = List[String]()
   session.onAfterActivationFired{ e: AfterActivationFiredEvent =>
