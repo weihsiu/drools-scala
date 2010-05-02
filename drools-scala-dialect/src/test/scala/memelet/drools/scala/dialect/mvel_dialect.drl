@@ -1,0 +1,8 @@
+package memelet.drools.scala.dialect
+
+rule "scala" dialect "mvel"
+when
+  f1_1: FactOne(name == "f1_1")
+then
+  System.out.println("*** mvel: " + f1_1)
+end

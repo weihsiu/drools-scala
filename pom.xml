@@ -13,6 +13,7 @@
     <module>drools-scala-core</module>
     <module>drools-scala-objectype</module>
     <module>drools-scala-evaluators</module>
+    <module>drools-scala-dialect</module>
     <module>drools-scala-dsl</module>
   </modules>
 
@@ -39,6 +40,7 @@
     <scalacheck.version>1.7-SNAPSHOT</scalacheck.version>
     <cglib.version>2.1_3</cglib.version>
 
+    <paranamer.version>2.2</paranamer.version>
   </properties>
 
   <dependencyManagement>

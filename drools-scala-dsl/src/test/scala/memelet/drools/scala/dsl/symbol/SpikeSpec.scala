@@ -72,11 +72,11 @@ class SpikeSpec extends SpecsMatchers with Mockito {
     private val consequenceFacts = new DynamicVariable[Array[InternalFactHandle]](null)
     def facts = consequenceFacts.value
 
-    class DslConsequence(f: => Unit) extends Consequence {
+    class DslConsequence(consequence: => Unit) extends Consequence {
       def evaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory) = {
         val facts = knowledgeHelper.getTuple.asInstanceOf[LeftTuple].toFactHandles
         consequenceFacts.withValue(facts) {
-          f
+          consequence
         }
       }
 
@@ -87,7 +87,9 @@ class SpikeSpec extends SpecsMatchers with Mockito {
       dslDeclaration.value
     }
 
-    def then (f: => Unit) { this.setConsequence(new DslConsequence(f)) }
+    def then (f: => Unit) {
+      this.setConsequence(new DslConsequence(f))
+    }
   }
 
   class DslDeclaration[T](val underlying: Declaration) {
@@ -173,7 +175,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
 //    val rz = when[FactOne](f1 => f1.name ~== r1.name)
 //  }
 
-  @Ignore @Test def createFromDsl {
+  @Test def createFromDsl {
     import DroolsDsl._
 
     val kbase: KnowledgeBase = KnowledgeBaseFactory.newKnowledgeBase()
@@ -197,8 +199,22 @@ class SpikeSpec extends SpecsMatchers with Mockito {
 
   //=================================================================================================================
 
-  @Test def usingCompiler {
-    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/symbol/spike_spec.drl"))
+  @Test def mvelUsingCompiler {
+    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/symbol/spike_spec_mvel.drl"))
+    import drools._
+    import RichDrools._
+
+    val f1_1 = FactOneX("f1_1")
+    val f1_2 = FactOneX("f1_2")
+    val f2_1 = FactTwoX("f2_1", f1_1)
+    session insert f1_1
+    session insert f1_2
+    session insert f2_1
+    session fireAllRules
+  }
+
+  @Test def javaUsingCompiler {
+    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/symbol/spike_spec_java.drl"))
     import drools._
     import RichDrools._
 

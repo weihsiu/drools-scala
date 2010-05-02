@@ -3,6 +3,7 @@ package memelet.drools.scala
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConversions._
 import org.joda.time.{Period, DateTime, DateTimeUtils}
+import java.io.StringReader
 //
 import org.drools.{FactException, KnowledgeBase, KnowledgeBaseFactory}
 import org.drools.event.rule._
@@ -17,7 +18,7 @@ import org.drools.builder.impl.KnowledgeBuilderImpl
 import org.drools.builder.{KnowledgeBuilder, ResourceType, KnowledgeBuilderFactory}
 import org.drools.builder.conf.EvaluatorOption
 
-private[scala] object ScalaExtensions {
+object ScalaExtensions {
   
   val scalaDrls = Seq("memelet/drools/scala/drools_scala_predef.drl")
 
@@ -54,6 +55,19 @@ object DroolsBuilder {
     ScalaExtensions.defineScalaDrlElements(kbuilder)
     drlFilenames.foreach { filename =>
        kbuilder.add(ResourceFactory.newClassPathResource(filename), ResourceType.DRL)
+    }
+
+    if (kbuilder.hasErrors) {
+      throw new RuntimeException(kbuilder.getErrors.mkString(","))
+    }
+    kbuilder.getKnowledgePackages
+  }
+
+  def buildKnowledgePackagesFromStrings(drls: Iterable[String]) : Iterable[KnowledgePackage] = {
+    val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
+    ScalaExtensions.registerScalaEvaluators(kbuilder)
+    drls.foreach { drl =>
+       kbuilder.add(ResourceFactory.newReaderResource(new StringReader(drl)), ResourceType.DRL)
     }
 
     if (kbuilder.hasErrors) {

@@ -1,0 +1,9 @@
+package memelet.drools.scala.dialect
+
+rule "scala" dialect "scala"
+when
+  f1_1: FactOne()
+  f2_1: FactTwo()
+then
+  System.out.println("*** scala: "+f1_1 +", "+f2_1)
+end

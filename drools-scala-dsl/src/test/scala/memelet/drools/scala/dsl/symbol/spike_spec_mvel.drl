@@ -1,0 +1,10 @@
+package memelet.drools.scala.dsl.symbol
+
+rule "r1" dialect "mvel"
+when
+  f1_1: FactOneX(name == "f1_1")
+  f2_1: FactTwoX(name == "f2_1", f == f1_1)
+then
+  System.out.println("*** mvel: " + f1_1 + ", " + f2_1);
+end
+
