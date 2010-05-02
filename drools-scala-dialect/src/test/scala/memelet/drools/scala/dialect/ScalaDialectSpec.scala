@@ -8,6 +8,9 @@ import org.junit.Test
 case class FactOne(name: String)
 case class FactTwo(name: String, f: FactOne)
 
+case class FactThree(name: String, f: FactOne)
+class FactOneSub(name: String) extends FactOne(name)
+
 class ScalaDialectSpec extends SpecsMatchers with Mockito {
 
   @Test def scala_consequence {
