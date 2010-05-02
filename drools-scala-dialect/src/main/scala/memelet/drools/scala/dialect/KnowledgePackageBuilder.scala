@@ -8,11 +8,10 @@ import org.drools.rule.Declaration
 import org.drools.WorkingMemory
 import org.drools.spi.{KnowledgeHelper, Consequence, AgendaGroup}
 
-import com.thoughtworks.paranamer.{CachingParanamer, BytecodeReadingParanamer}
+import com.thoughtworks.paranamer.BytecodeReadingParanamer
 import memelet.drools.scala.ScalaExtensions
 import scala.collection.mutable.{WeakHashMap, Stack}
 
-import java.lang.reflect.Method
 import java.util.{Map => jMap}
 import scala.collection.{Map => sMap}
 import scala.collection.JavaConversions._
@@ -22,23 +21,19 @@ class KnowledgePackageBuilder {
   private[dialect] val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
   ScalaExtensions.registerScalaEvaluators(kbuilder)
 
-  private val paranamer = new CachingParanamer(new BytecodeReadingParanamer)
-  private val parameterTypesCache = new WeakHashMap[Method, Map[String,Class[_]]]
+  private val paranamer = new BytecodeReadingParanamer
+  private val paramInfoCache = new WeakHashMap[Class[_], Map[String,Class[_]]]
 
-  private def lookupApplyMethod(functionClass: Class[_]): Method = {
-    functionClass.getMethods.filter(m => m.getName == "apply" && m.getReturnType == java.lang.Void.TYPE).head
-  }
+  private[dialect] def lookupParameterInfo(functionClazz: Class[_]): Map[String,Class[_]] = {
 
-  private[dialect] def lookupParameterNames(functionClass: Class[_]): Seq[String] = {
-    val applyMethod = lookupApplyMethod(functionClass)
-    paranamer.lookupParameterNames(applyMethod)
-  }
-
-  private[dialect] def lookupParameterTypes(functionClass: Class[_]): Map[String,Class[_]] = {
-    val applyMethod = lookupApplyMethod(functionClass)
-    val parameterNames = paranamer.lookupParameterNames(applyMethod)
-    val parameterTypes = applyMethod.getParameterTypes
-    (parameterNames zip parameterTypes) map { Map(_) } reduceLeft(_ ++ _)
+    paramInfoCache.get(functionClazz) getOrElse {
+      val applyMethod = functionClazz.getMethods.filter(m => m.getName == "apply" && m.getReturnType == java.lang.Void.TYPE).head
+      val paramNames = paranamer.lookupParameterNames(applyMethod)
+      val paramTypes = applyMethod.getParameterTypes
+      val paramInfo = (paramNames zip paramTypes) map { Map(_) } reduceLeft(_ ++ _)
+      paramInfoCache += (functionClazz -> paramInfo)
+      paramInfo
+    }
   }
 
   def knowledgePackages = kbuilder.getKnowledgePackages
@@ -117,10 +112,8 @@ class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder
     def consequence(declaraions: jMap[String,Declaration]): Consequence
 
     def build {
-      import builder.kbuilder
       ScalaConsequenceBuilder.builderStack.push(this)
       try {
-        println(packagedDrl)
         kbuilder.add(ResourceFactory.newReaderResource(new StringReader(packagedDrl)), ResourceType.DRL)
         if (kbuilder.hasErrors) throw new RuntimeException(kbuilder.getErrors.mkString(","))
       } finally {
@@ -130,46 +123,40 @@ class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder
 
   }
 
-  //---- Typed Invocation ----
-
-  private[dialect] abstract class TypedConsequence(declarations: sMap[String,Declaration], rhsClazz: Class[_]) extends Consequence {
+  private abstract class TypedConsequence(declarations: sMap[String,Declaration], rhsClazz: Class[_]) extends Consequence {
 
     def doEvaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory, facts: Seq[AnyRef])
 
     // Type check function parameters against declarations
-    for (paramType <- lookupParameterTypes(rhsClazz)) {
-      paramType._2 match {
-        case paramClazz if paramClazz.isAssignableFrom(classOf[KnowledgeHelper]) => //noop
-        case paramClazz if paramClazz.isAssignableFrom(classOf[WorkingMemory]) => //noop
-        case paramClazz => {
-          val declaration = declarations.get(paramType._1) getOrElse {
-            throw new IllegalArgumentException("Consequence parameter '%s: %s' does not match any fact identifiers"
-              .format(paramType._1, paramType._2.getName))
-          }
-          val factClazz = declaration.getExtractor.getExtractToClass
-          if (!paramClazz.isAssignableFrom(factClazz)) {
-            throw new ClassCastException("Consequence parameter '%s: %s' not assignable from Fact '%s: %s'"
-              .format(paramType._1, paramType._2.getName, declaration.getIdentifier, factClazz.getName))
-          }   
+    lookupParameterInfo(rhsClazz).foreach { paramType => paramType._2 match {
+      case paramClazz if paramClazz.isAssignableFrom(classOf[KnowledgeHelper]) => //ok
+      case paramClazz if paramClazz.isAssignableFrom(classOf[WorkingMemory]) => //ok
+      case paramClazz => {
+        val declaration = declarations.get(paramType._1) getOrElse {
+          throw new IllegalArgumentException("Consequence parameter '%s: %s' does not match any fact identifiers"
+            .format(paramType._1, paramType._2.getName))
+        }
+        val factClazz = declaration.getExtractor.getExtractToClass
+        if (!paramClazz.isAssignableFrom(factClazz)) {
+          throw new ClassCastException("Consequence parameter '%s: %s' not assignable from Fact '%s: %s'"
+            .format(paramType._1, paramType._2.getName, declaration.getIdentifier, factClazz.getName))
         }
       }
-    }
+    }}
 
     def evaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory) {
-
-      def facts: Seq[AnyRef] =
-        Seq.empty[AnyRef] ++ lookupParameterTypes(rhsClazz).map { paramType => paramType._2 match {
+      def facts: Seq[AnyRef] = //TODO Could this be (partially) cached somehow?
+        Seq.empty[AnyRef] ++ lookupParameterInfo(rhsClazz).map { paramType => paramType._2 match {
           case pclazz if pclazz.isAssignableFrom(classOf[KnowledgeHelper]) => knowledgeHelper
           case pclazz if pclazz.isAssignableFrom(classOf[WorkingMemory]) => workingMemory
           case _ => knowledgeHelper.getTuple.get(declarations(paramType._1)).getObject
         }}
-
       doEvaluate(knowledgeHelper, workingMemory, facts)
     }
 
   }
 
-  //TODO Find some way to kill this smelly boilerplate
+  //TODO Find some way to kill this smelly boilerplate (without reflection)
 
   private class RuleBuilder0(ruleDescriptor: Rule, rhs: Function0[Unit]) extends RuleBuilder(ruleDescriptor) {
     def consequence(declarations: jMap[String,Declaration]) = new TypedConsequence(declarations, rhs.getClass) {
