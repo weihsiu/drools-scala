@@ -7,33 +7,51 @@ import org.drools.builder.{ResourceType, KnowledgeBuilderFactory}
 import org.drools.definitions.impl.KnowledgePackageImp
 import java.lang.reflect.Method
 import com.thoughtworks.paranamer.{CachingParanamer, BytecodeReadingParanamer}
-import scala.collection.JavaConversions._
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.conf.EventProcessingOption
 import memelet.drools.scala.{DroolsBuilder, ScalaExtensions}
-import org.drools.spi.{Consequence, AgendaGroup}
-import org.drools.rule.Rule
+import scala.collection.mutable
+import org.drools.rule.builder.{RuleBuildContext, ConsequenceBuilder}
+import org.drools.rule.{Declaration, Rule => DroolsRule}
+import org.drools.WorkingMemory
+import org.drools.spi.{KnowledgeHelper, Consequence, AgendaGroup}
 
+import java.util.{Map => jMap}
+import scala.collection.{Map => sMap}
+import scala.collection.JavaConversions._
+
+//TODO Maybe this should only yield compiled packages, leaving the creation of the kbase and session
+// to the client.
 class KnowledgeBaseBuilder {
 
-  private var packageDeclarations: Vector[Package] = Vector.empty
   private[dialect] val paranamer = new CachingParanamer(new BytecodeReadingParanamer)
   private[dialect] val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
   ScalaExtensions.registerScalaEvaluators(kbuilder)
 
-  private[dialect] def addPackage(packageDeclaration: Package) = packageDeclarations = packageDeclarations appendBack packageDeclaration
-
   def statefulSession = DroolsBuilder
-            .buildKnowledgeBase(packageDeclarations.map(_.build), EventProcessingOption.STREAM)
+            .buildKnowledgeBase(kbuilder.getKnowledgePackages, EventProcessingOption.STREAM)
             .statefulSession(ClockTypeOption.get("pseudo"))
 
 }
 
-case class Package(name: String = null)(implicit val builder: KnowledgeBaseBuilder) {
+object ScalaConsequenceBuilder extends ConsequenceBuilder {
 
-  builder.addPackage(this)
+  private[dialect] val builderStack = new mutable.Stack[Package#RuleBuilder]
 
-  private[dialect] var ruleDescriptors: Map[String,RuleWithConsequence] = Map.empty
+  def build(context: RuleBuildContext) {
+    context.getBuildStack.push(context.getRule.getLhs)
+    try {
+      val declarations = context.getDeclarationResolver.getDeclarations(context.getRule)
+      val builder = builderStack.top
+      context.getRule.setConsequence(builder.consequence(declarations))
+    } finally {
+      context.getBuildStack.pop
+    }
+  }
+}
+
+class Package(name: String = null)(implicit val builder: KnowledgeBaseBuilder) {
+
   private var importDescrptors: Vector[String] = Vector.empty
   private def defaultSalience = () => 0
 
@@ -41,20 +59,29 @@ case class Package(name: String = null)(implicit val builder: KnowledgeBaseBuild
     importDescrptors = importDescrptors appendBack ("import "+manifest[T].erasure.getName+"\n")
   }
 
-  def rule(name: String, salience: () => Int = defaultSalience, agendaGroup: Option[AgendaGroup] = None,
-           ruleflowGroup: Option[String] = None, lockOnActive: Boolean = false, noLoop: Boolean = false,
-           lhs: Option[String] = None) =
-    RuleDescriptor(name, salience, agendaGroup, ruleflowGroup, lockOnActive, noLoop, lhs)
+  case class Rule (name: String, salience: () => Int = defaultSalience, agendaGroup: Option[AgendaGroup] = None,
+                   ruleflowGroup: Option[String] = None, lockOnActive: Boolean = false, noLoop: Boolean = false,
+                   lhs: Option[String] = None) {
 
-  case class RuleDescriptor(name: String, salience: () => Int = defaultSalience, agendaGroup: Option[AgendaGroup] = None,
-                            ruleflowGroup: Option[String] = None, lockOnActive: Boolean = false, noLoop: Boolean = false,
-                            lhs: Option[String] = None) {
+    def When(lhs: String): Rule = copy(lhs = Some(lhs))
 
-    def when(lhs: String): RuleDescriptor = copy(lhs = Some(lhs))
+    def Then(rhs: Function0[Unit]) { (new RuleBuilder0(this, rhs)).build }
+    def Then[T1: Manifest](rhs: Function1[T1,Unit]) { (new RuleBuilder1(this, rhs)).build }
+    def Then[T1: Manifest, T2: Manifest](rhs: Function2[T1,T2,Unit]) { (new RuleBuilder2(this, rhs)).build }
 
-    def then(rhs: Function0[Unit]) = RuleWithConsequence0(this, rhs)
+  }
 
-    def drl = """
+  abstract class RuleBuilder(descriptor: Rule) {
+
+    def packagedDrl: String = {
+      """
+      package %s
+
+      %s
+
+      import scala.Option
+      global scala.None$ None
+
       rule "%s" dialect "scala"
         salience %d
       when
@@ -62,17 +89,29 @@ case class Package(name: String = null)(implicit val builder: KnowledgeBaseBuild
       then
         // placeholder for parser
       end
-    """.format(name, salience(), lhs.get)
+      """.format(Option(Package.this.name) getOrElse this.getClass.getPackage.getName,
+                 importDescrptors reduceLeft (_ ++ _),
+                 descriptor.name, descriptor.salience(), descriptor.lhs.get)
+    }
 
-  }
+    def consequence(declarations: jMap[String,Declaration]): Consequence
+    
+    def build {
+      import builder.kbuilder
+      ScalaConsequenceBuilder.builderStack.push(this)
+      try {
+        println(packagedDrl)
+        kbuilder.add(ResourceFactory.newReaderResource(new StringReader(packagedDrl)), ResourceType.DRL)
+        if (kbuilder.hasErrors) throw new RuntimeException(kbuilder.getErrors.mkString(","))
+      } finally {
+        ScalaConsequenceBuilder.builderStack.pop
+      }
+    }
 
-  abstract class RuleWithConsequence(ruleDescriptor: RuleDescriptor) {
-
-    ruleDescriptors = ruleDescriptors + (ruleDescriptor.name -> this)
-
-    def drl = ruleDescriptor.drl
-
-    protected[dialect] def replaceStubConsequence(rule: Rule, ruleDescriptor: RuleWithConsequence)
+    protected def lookupParameterNames(functionClass: Class[_]): Array[String] = {
+      val applyMethod = functionClass.getMethods.filter(m => m.getName == "apply" && m.getReturnType == java.lang.Void.TYPE).head
+      builder.paranamer.lookupParameterNames(applyMethod)
+    }
 
     protected def parameterInfos(functionClass: Class[_]): Map[String,Class[_]] = {
       val applyMethod = functionClass.getMethods.filter(m => m.getName == "apply" && m.getReturnType == java.lang.Void.TYPE).head
@@ -82,40 +121,62 @@ case class Package(name: String = null)(implicit val builder: KnowledgeBaseBuild
     }
   }
 
-  case class RuleWithConsequence0(ruleDescriptor: RuleDescriptor, rhs: Function0[Unit]) extends RuleWithConsequence(ruleDescriptor) {
+  abstract class ConsequenceInvoker(declarations: sMap[String,Declaration]) extends Consequence {
 
-    protected[dialect] def replaceStubConsequence(rule: Rule, ruleDescriptor: RuleWithConsequence) {
-      val parameterInfo = parameterInfos(rhs.getClass)
-      println("** rule: %s(%s)".format(rule.getName, parameterInfo))
+    import org.drools.reteoo.LeftTuple
+
+    protected def doEvaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory, facts: sMap[String,AnyRef])
+
+    def evaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory) {
+
+      def resolveValue(declaration: Declaration): Option[AnyRef] = {
+        val tuple = knowledgeHelper.getTuple
+        val factHandles = tuple.asInstanceOf[LeftTuple].toFactHandles
+        val offset: Int = declaration.getPattern.getOffset
+        //TODO Is this check necessary?
+        if (offset < factHandles.length) Some(factHandles(offset).getObject) else None
+      }
+
+      val facts: sMap[String, AnyRef] = for {
+        (identifier, declaration) <- declarations
+        value = resolveValue(declaration)
+      } yield (identifier -> value.get)
+
+      doEvaluate(knowledgeHelper, workingMemory, facts)
     }
 
   }
 
-  def drl: String = """
-    package %s
-    %s
-    import scala.Option
-    global scala.None$ None
-    %s
-  """.format(Option(name) getOrElse this.getClass.getPackage.getName,
-             importDescrptors reduceLeft (_ ++ _),
-             ruleDescriptors map(_._2.drl) reduceLeft (_ ++ _)
-      )
+  class RuleBuilder0(ruleDescriptor: Rule, rhs: Function0[Unit]) extends RuleBuilder(ruleDescriptor) {
 
-  def build: KnowledgePackage = {
-    import builder.kbuilder
-
-    println(drl)
-
-    kbuilder.add(ResourceFactory.newReaderResource(new StringReader(drl)), ResourceType.DRL)
-    if (kbuilder.hasErrors) throw new RuntimeException(kbuilder.getErrors.mkString(","))
-    val pkg = kbuilder.getKnowledgePackages.head
-
-    for (rule <- pkg.asInstanceOf[KnowledgePackageImp].pkg.getRules) {
-//      replaceStubConsequence(rule, ruleDescriptors(rule.getName))
+    def consequence(declarations: jMap[String,Declaration]) = new ConsequenceInvoker(declarations) {
+      def doEvaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory, facts: sMap[String,AnyRef]) {
+        rhs()        
+      }
     }
 
-    pkg
+  }
+
+  class RuleBuilder1[T1: Manifest](ruleDescriptor: Rule, rhs: Function1[T1,Unit]) extends RuleBuilder(ruleDescriptor) {
+
+    def consequence(declarations: jMap[String,Declaration]) = new ConsequenceInvoker(declarations) {
+      val parameterNames = lookupParameterNames(rhs.getClass)
+      def doEvaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory, facts: sMap[String,AnyRef]) {
+        rhs(facts(parameterNames(0)).asInstanceOf[T1])
+      }
+    }
+
+  }
+
+  class RuleBuilder2[T1: Manifest, T2: Manifest](ruleDescriptor: Rule, rhs: Function2[T1,T2,Unit]) extends RuleBuilder(ruleDescriptor) {
+
+    def consequence(declarations: jMap[String,Declaration]) = new ConsequenceInvoker(declarations) {
+      val parameterNames = lookupParameterNames(rhs.getClass)
+      def doEvaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory, facts: sMap[String,AnyRef]) {
+        rhs(facts(parameterNames(0)).asInstanceOf[T1], facts(parameterNames(1)).asInstanceOf[T2])
+      }
+    }
+
   }
 
 }

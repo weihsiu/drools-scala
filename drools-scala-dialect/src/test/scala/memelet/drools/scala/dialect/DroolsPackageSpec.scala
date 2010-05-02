@@ -16,12 +16,12 @@ class DroolsPackageSpec extends SpecsMatchers with Mockito {
       Import[FactOne]
       Import[FactTwo]
 
-      rule("rule1 v2.1") when {"""
+      Rule("rule1 v2.1") When {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """} then { () =>
-        println("**then**")
-        println("**then**")
+      """} Then { (f1_1: FactOne, f2_1: FactTwo) =>
+        println("**then: f1_1=%s".format(f1_1))
+        println("**then: f2_1=%s".format(f2_1))
       }
 
     }

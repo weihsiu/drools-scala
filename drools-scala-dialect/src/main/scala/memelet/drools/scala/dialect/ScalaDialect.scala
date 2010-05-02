@@ -9,6 +9,6 @@ class ScalaDialect(builder: PackageBuilder,
                    pkg: org.drools.rule.Package)
         extends MVELDialect(builder, pkgRegistry, pkg, "scala") {
 
-  override def getConsequenceBuilder: ConsequenceBuilder = ScalaStubConsequenceBuilder
+  override def getConsequenceBuilder: ConsequenceBuilder = ScalaConsequenceBuilder
 
 }
