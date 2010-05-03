@@ -10,9 +10,9 @@
   </parent>
 
   <groupId>memelet.drools</groupId>
-  <artifactId>drools-scala-dialect</artifactId>
+  <artifactId>drools-scala-embedded-dialect</artifactId>
   <packaging>jar</packaging>
-  <name>DROOLS Scala Dialect</name>
+  <name>DROOLS Scala Embedded Dialect</name>
 
   <properties>
   </properties>
