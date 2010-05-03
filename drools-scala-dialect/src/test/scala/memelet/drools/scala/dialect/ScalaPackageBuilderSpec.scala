@@ -65,10 +65,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       Import[FactOne]
       Import[FactTwo]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """} Then { (f1_1: FactOne, f2_1: FactTwo) =>
+      """} then { (f1_1: FactOne, f2_1: FactTwo) =>
         actual_f1_1 = f1_1
         actual_f2_1 = f2_1
       }
@@ -85,9 +85,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     new Package {
       Import[FactOne]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         invoked = true
       }
     }
@@ -101,10 +101,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       Import[FactOne]
       Import[FactTwo]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """} Then { (f2_1: FactTwo, f1_1: FactOne) =>
+      """} then { (f2_1: FactTwo, f1_1: FactOne) =>
         actual_f1_1 = f1_1
         actual_f2_1 = f2_1
       }
@@ -120,10 +120,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       Import[FactOne]
       Import[FactTwo]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """} Then { (f1_1: FactOne, f2_1: FactTwo, f3_1: FactThree) =>
+      """} then { (f1_1: FactOne, f2_1: FactTwo, f3_1: FactThree) =>
         // noop
       }
     } must throwA[builder.RuleBuildException]
@@ -134,10 +134,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       Import[FactOne]
       Import[FactTwo]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """} Then { (f1_xxx: FactOne, f2_1: FactTwo, f3_1: FactThree) =>
+      """} then { (f1_xxx: FactOne, f2_1: FactTwo, f3_1: FactThree) =>
         // noop
       }
     } must throwA[builder.RuleBuildException]
@@ -148,10 +148,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       Import[FactOne]
       Import[FactTwo]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """} Then { (f1_1: FactThree, f2_1: FactTwo) =>
+      """} then { (f1_1: FactThree, f2_1: FactTwo) =>
         // noop
       }
     } must throwA[builder.RuleBuildException]
@@ -161,9 +161,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     new Package {
       Import[FactOneSub]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOneSub()
-      """} Then { f1_1: FactOne =>
+      """} then { f1_1: FactOne =>
         actual_f1_1 = f1_1
       }
     }
@@ -177,9 +177,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     new Package {
       Import[FactOne]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { f1_1: FactOneSub =>
+      """} then { f1_1: FactOneSub =>
         // noop
       }
     } must throwA[builder.RuleBuildException]
@@ -192,9 +192,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     new Package {
       Import[FactOne]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { (kh: KnowledgeHelper, wm: WorkingMemory) =>
+      """} then { (kh: KnowledgeHelper, wm: WorkingMemory) =>
         actual_kh = kh
         actual_wm = wm
       }
@@ -209,9 +209,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     new Package {
       Import[FactOne]
 
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne() asdf asdf asdf asdf
-      """} Then { f1_1: FactOne =>
+      """} then { f1_1: FactOne =>
         // noop
       }
     } must throwA[builder.RuleBuildException]
@@ -220,9 +220,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   // Really same as mismatch parameter name (wrt implementation)
   @Test def exception_thrown_for_missing_import {
     new Package {
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { f1_1: FactOneSub =>
+      """} then { f1_1: FactOneSub =>
         // noop
       }
     } must throwA[builder.RuleBuildException]
@@ -231,9 +231,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   @Test def package_name_defaults_to_containing_scala_class_package {
     new Package {
       Import[FactOne]
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         // noop
       }
     }
@@ -245,9 +245,9 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   @Test def package_named_explicitly {
     new Package("mypackage") {
       Import[FactOne]
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         // noop
       }
     }
@@ -259,17 +259,17 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   @Test def multiple_packages_with_different_names {
     new Package("mypackage_1") {
       Import[FactOne]
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         // noop
       }
     }
     new Package("mypackage_2") {
       Import[FactOne]
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         // noop
       }
     }
@@ -285,17 +285,17 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   @Test def multiple_packages_with_same_name_combine {
     new Package("mypackage") {
       Import[FactOne]
-      Rule("rule_1") When {"""
+      Rule("rule_1") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         // noop
       }
     }
     new Package("mypackage") {
       Import[FactOne]
-      Rule("rule_2") When {"""
+      Rule("rule_2") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         // noop
       }
     }
@@ -312,14 +312,14 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
 
     new Package("mypackage") {
       Import[FactOne]
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         rule1_invoked = true
       }
-      Rule("rule") When {"""
+      Rule("rule") when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         rule2_invoked = true
       }
     }
@@ -339,10 +339,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
         ruleflowGroup = Some("ruleflow_group"),
         lockOnActive = true,
         noLoop = true) 
-      .When {"""
+      .when {"""
         f1_1: FactOne()
       """}
-      .Then { () =>
+      .then { () =>
         // noop
       }
     }
@@ -367,14 +367,14 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
 
     new Package("mypackage") {
       Import[FactOne]
-      Rule() When {"""
+      Rule() when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         rule1_invoked = true
       }
-      Rule() When {"""
+      Rule() when {"""
         f1_1: FactOne()
-      """} Then { () =>
+      """} then { () =>
         rule2_invoked = true
       }
     }
@@ -385,30 +385,26 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule2_invoked must_== true
   }
 
-  //---- Sugar ----
-
-  @Test def sugar {
+  @Test def concise_syntax {
     var rule1_invoked = false
     var rule2_invoked = false
 
     new Package("mypackage") {
 
-      import RichDialect._
-      
       Import[FactOne]
-      Import[FactTwo];
+      Import[FactTwo]
 
-      """
+      Rule("rule1") {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """ ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+      """} ==> { (f1_1: FactOne, f2_1: FactTwo) =>
         rule1_invoked = true
-      };
+      }
 
-      """
+      Rule("rule2", salience = 10) {"""
         f1_1: FactOne()
         f2_1: FactTwo()
-      """ ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+      """} ==> { (f1_1: FactOne, f2_1: FactTwo) =>
         rule2_invoked = true
       }
     }

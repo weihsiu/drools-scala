@@ -81,34 +81,35 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
     ruleCount += 1
     private[dialect] var lhs: Option[String] = None
 
-    def When(lhs: String): Rule = {
+    def when(lhs: String): Rule = {
       this.lhs = Some(lhs)
       this
     }
+    def apply(lhs: String): Rule = when(lhs)
 
-    def Then(rhs: Function0[Unit]) { (new RuleBuilder0(this, rhs)).build }
-    def Then[T1](rhs: Function1[T1,Unit]) { (new RuleBuilder1(this, rhs)).build }
-    def Then[T1,T2](rhs: Function2[T1,T2,Unit]) { (new RuleBuilder2(this, rhs)).build }
-    def Then[T1,T2,T3](rhs: Function3[T1,T2,T3,Unit]) { (new RuleBuilder3(this, rhs)).build }
-    def Then[T1,T2,T3,T4](rhs: Function4[T1,T2,T3,T4,Unit]) { (new RuleBuilder4(this, rhs)).build }
-    def Then[T1,T2,T3,T4,T5](rhs: Function5[T1,T2,T3,T4,T5,Unit]) { (new RuleBuilder5(this, rhs)).build }
-    def Then[T1,T2,T3,T4,T5,T6](rhs: Function6[T1,T2,T3,T4,T5,T6,Unit]) { (new RuleBuilder6(this, rhs)).build }
-    def Then[T1,T2,T3,T4,T5,T6,T7](rhs: Function7[T1,T2,T3,T4,T5,T6,T7,Unit]) { (new RuleBuilder7(this, rhs)).build }
-    def Then[T1,T2,T3,T4,T5,T6,T7,T8](rhs: Function8[T1,T2,T3,T4,T5,T6,T7,T8,Unit]) { (new RuleBuilder8(this, rhs)).build }
-    def Then[T1,T2,T3,T4,T5,T6,T7,T8,T9](rhs: Function9[T1,T2,T3,T4,T5,T6,T7,T8,T9,Unit]) { (new RuleBuilder9(this, rhs)).build }
-    def Then[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10](rhs: Function10[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,Unit]) { (new RuleBuilder10(this, rhs)).build }
+    def then(rhs: Function0[Unit]) { (new RuleBuilder0(this, rhs)).build }
+    def then[T1](rhs: Function1[T1,Unit]) { (new RuleBuilder1(this, rhs)).build }
+    def then[T1,T2](rhs: Function2[T1,T2,Unit]) { (new RuleBuilder2(this, rhs)).build }
+    def then[T1,T2,T3](rhs: Function3[T1,T2,T3,Unit]) { (new RuleBuilder3(this, rhs)).build }
+    def then[T1,T2,T3,T4](rhs: Function4[T1,T2,T3,T4,Unit]) { (new RuleBuilder4(this, rhs)).build }
+    def then[T1,T2,T3,T4,T5](rhs: Function5[T1,T2,T3,T4,T5,Unit]) { (new RuleBuilder5(this, rhs)).build }
+    def then[T1,T2,T3,T4,T5,T6](rhs: Function6[T1,T2,T3,T4,T5,T6,Unit]) { (new RuleBuilder6(this, rhs)).build }
+    def then[T1,T2,T3,T4,T5,T6,T7](rhs: Function7[T1,T2,T3,T4,T5,T6,T7,Unit]) { (new RuleBuilder7(this, rhs)).build }
+    def then[T1,T2,T3,T4,T5,T6,T7,T8](rhs: Function8[T1,T2,T3,T4,T5,T6,T7,T8,Unit]) { (new RuleBuilder8(this, rhs)).build }
+    def then[T1,T2,T3,T4,T5,T6,T7,T8,T9](rhs: Function9[T1,T2,T3,T4,T5,T6,T7,T8,T9,Unit]) { (new RuleBuilder9(this, rhs)).build }
+    def then[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10](rhs: Function10[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,Unit]) { (new RuleBuilder10(this, rhs)).build }
 
-    def ==>(rhs: Function0[Unit]) { (new RuleBuilder0(this, rhs)).build }
-    def ==>[T1](rhs: Function1[T1,Unit]) { (new RuleBuilder1(this, rhs)).build }
-    def ==>[T1,T2](rhs: Function2[T1,T2,Unit]) { (new RuleBuilder2(this, rhs)).build }
-    def ==>[T1,T2,T3](rhs: Function3[T1,T2,T3,Unit]) { (new RuleBuilder3(this, rhs)).build }
-    def ==>[T1,T2,T3,T4](rhs: Function4[T1,T2,T3,T4,Unit]) { (new RuleBuilder4(this, rhs)).build }
-    def ==>[T1,T2,T3,T4,T5](rhs: Function5[T1,T2,T3,T4,T5,Unit]) { (new RuleBuilder5(this, rhs)).build }
-    def ==>[T1,T2,T3,T4,T5,T6](rhs: Function6[T1,T2,T3,T4,T5,T6,Unit]) { (new RuleBuilder6(this, rhs)).build }
-    def ==>[T1,T2,T3,T4,T5,T6,T7](rhs: Function7[T1,T2,T3,T4,T5,T6,T7,Unit]) { (new RuleBuilder7(this, rhs)).build }
-    def ==>[T1,T2,T3,T4,T5,T6,T7,T8](rhs: Function8[T1,T2,T3,T4,T5,T6,T7,T8,Unit]) { (new RuleBuilder8(this, rhs)).build }
-    def ==>[T1,T2,T3,T4,T5,T6,T7,T8,T9](rhs: Function9[T1,T2,T3,T4,T5,T6,T7,T8,T9,Unit]) { (new RuleBuilder9(this, rhs)).build }
-    def ==>[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10](rhs: Function10[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,Unit]) { (new RuleBuilder10(this, rhs)).build }
+    def ==>(rhs: Function0[Unit]) { then(rhs) }
+    def ==>[T1](rhs: Function1[T1,Unit]) { then(rhs) }
+    def ==>[T1,T2](rhs: Function2[T1,T2,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3](rhs: Function3[T1,T2,T3,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4](rhs: Function4[T1,T2,T3,T4,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4,T5](rhs: Function5[T1,T2,T3,T4,T5,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4,T5,T6](rhs: Function6[T1,T2,T3,T4,T5,T6,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4,T5,T6,T7](rhs: Function7[T1,T2,T3,T4,T5,T6,T7,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4,T5,T6,T7,T8](rhs: Function8[T1,T2,T3,T4,T5,T6,T7,T8,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4,T5,T6,T7,T8,T9](rhs: Function9[T1,T2,T3,T4,T5,T6,T7,T8,T9,Unit]) { then(rhs) }
+    def ==>[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10](rhs: Function10[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,Unit]) { then(rhs) }
   }
 
   private[dialect] abstract class RuleBuilder(descriptor: Rule) {
@@ -288,22 +289,5 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
       }
     }
   }
-
-  //---- Sugar ----
-
-  object RichDialect {
-    
-    class RichRule(rule: Rule) {
-
-    }
-    implicit def enrichRuleExpression(ruleExpression: String): RichRule = new RichRule(new Rule)
-
-    implicit def stringToRule(ruleExpression: String): Rule = {
-      val rule = new Rule
-      rule.When(ruleExpression)
-    }
-
-  }
-
 
 }
