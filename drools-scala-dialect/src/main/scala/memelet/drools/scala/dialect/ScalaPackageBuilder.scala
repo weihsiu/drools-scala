@@ -16,7 +16,7 @@ import java.util.{Map => jMap}
 import scala.collection.{Map => sMap}
 import scala.collection.JavaConversions._
 
-class KnowledgePackageBuilder {
+class ScalaPackageBuilder {
 
   private[dialect] val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
   ScalaExtensions.registerScalaEvaluators(kbuilder)
@@ -30,11 +30,13 @@ class KnowledgePackageBuilder {
       val applyMethod = functionClazz.getMethods.filter(m => m.getName == "apply" && m.getReturnType == java.lang.Void.TYPE).head
       val paramNames = paranamer.lookupParameterNames(applyMethod)
       val paramTypes = applyMethod.getParameterTypes
-      val paramInfo = (paramNames zip paramTypes) map { Map(_) } reduceLeft(_ ++ _)
+      val paramInfo = Map.empty[String,Class[_]] ++ (paramNames zip paramTypes) map (e => e)
       paramInfoCache += (functionClazz -> paramInfo)
       paramInfo
     }
   }
+
+  class RuleBuildException(message: String) extends RuntimeException(message)
 
   def knowledgePackages = kbuilder.getKnowledgePackages
 
@@ -56,22 +58,32 @@ private[dialect] object ScalaConsequenceBuilder extends ConsequenceBuilder {
   }
 }
 
-class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder) {
+class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
 
   import builder._
 
-  private var importDescrptors: Vector[String] = Vector.empty
-  private def defaultSalience = () => 0
+  private var ruleCount = 0
+  private def generateRuleName = this.name + ".rule#" + (ruleCount+1)
+
+  private var importDescriptors: Vector[String] = Vector.empty
+  private def defaultSalience = 0
 
   def Import[T: Manifest] {
-    importDescrptors = importDescrptors appendBack ("import "+manifest[T].erasure.getName+"\n")
+    importDescriptors = importDescriptors appendBack ("import "+manifest[T].erasure.getName+"\n")
   }
 
-  case class Rule (name: String, salience: () => Int = defaultSalience, agendaGroup: Option[AgendaGroup] = None,
-                   ruleflowGroup: Option[String] = None, lockOnActive: Boolean = false, noLoop: Boolean = false,
-                   lhs: Option[String] = None) {
+  //TODO Add remaining properties
+  //TODO Dynamic salience
+  case class Rule (name: String = generateRuleName, salience: Int = defaultSalience, agendaGroup: Option[String] = None,
+                   ruleflowGroup: Option[String] = None, lockOnActive: Boolean = false, noLoop: Boolean = false) {
 
-    def When(lhs: String): Rule = copy(lhs = Some(lhs))
+    ruleCount += 1
+    private[dialect] var lhs: Option[String] = None
+
+    def When(lhs: String): Rule = {
+      this.lhs = Some(lhs)
+      this
+    }
 
     def Then(rhs: Function0[Unit]) { (new RuleBuilder0(this, rhs)).build }
     def Then[T1](rhs: Function1[T1,Unit]) { (new RuleBuilder1(this, rhs)).build }
@@ -91,6 +103,12 @@ class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder
 
   private[dialect] abstract class RuleBuilder(descriptor: Rule) {
 
+    def quotedAttribute(name: String, value: Option[String]) = value match {
+      case Some(value) => name + " \"" + value + "\""
+      case None => ""
+    }
+    def booleanAttribute(name: String, value: Boolean) = name + " " + value
+
     def packagedDrl: String = {
       """
       package %s
@@ -99,14 +117,24 @@ class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder
       global scala.None$ None
       rule "%s" dialect "scala"
         salience %d
+        %s
+        %s
+        %s
+        %s
       when
         %s
       then
         // placeholder for parser
       end
-      """.format(Option(Package.this.name) getOrElse this.getClass.getPackage.getName,
-                 importDescrptors reduceLeft (_ ++ _),
-                 descriptor.name, descriptor.salience(), descriptor.lhs.get)
+      """.format(Option(Package.this.name) getOrElse Package.this.getClass.getPackage.getName,
+                 if (importDescriptors.isEmpty) "" else importDescriptors reduceLeft (_ ++ _),
+                 descriptor.name,
+                 descriptor.salience,
+                 quotedAttribute("agenda-group", descriptor.agendaGroup),
+                 quotedAttribute("ruleflow-group", descriptor.ruleflowGroup),
+                 booleanAttribute("no-loop", descriptor.noLoop),
+                 booleanAttribute("lock-on-active", descriptor.lockOnActive),
+                 descriptor.lhs.get)
     }
 
     def consequence(declaraions: jMap[String,Declaration]): Consequence
@@ -115,7 +143,7 @@ class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder
       ScalaConsequenceBuilder.builderStack.push(this)
       try {
         kbuilder.add(ResourceFactory.newReaderResource(new StringReader(packagedDrl)), ResourceType.DRL)
-        if (kbuilder.hasErrors) throw new RuntimeException(kbuilder.getErrors.mkString(","))
+        if (kbuilder.hasErrors) throw new RuleBuildException(kbuilder.getErrors.mkString(","))
       } finally {
         ScalaConsequenceBuilder.builderStack.pop
       }
@@ -128,18 +156,18 @@ class Package(name: String = null)(implicit val builder: KnowledgePackageBuilder
     def doEvaluate(knowledgeHelper: KnowledgeHelper, workingMemory: WorkingMemory, facts: Seq[AnyRef])
 
     // Type check function parameters against declarations
-    lookupParameterInfo(rhsClazz).foreach { paramType => paramType._2 match {
+    lookupParameterInfo(rhsClazz).foreach { paramInfo => paramInfo._2 match {
       case paramClazz if paramClazz.isAssignableFrom(classOf[KnowledgeHelper]) => //ok
       case paramClazz if paramClazz.isAssignableFrom(classOf[WorkingMemory]) => //ok
       case paramClazz => {
-        val declaration = declarations.get(paramType._1) getOrElse {
-          throw new IllegalArgumentException("Consequence parameter '%s: %s' does not match any fact identifiers"
-            .format(paramType._1, paramType._2.getName))
+        val declaration = declarations.get(paramInfo._1) getOrElse {
+          throw new RuleBuildException("Consequence parameter '%s: %s' does not match any fact identifiers"
+            .format(paramInfo._1, paramInfo._2.getName))
         }
         val factClazz = declaration.getExtractor.getExtractToClass
         if (!paramClazz.isAssignableFrom(factClazz)) {
-          throw new ClassCastException("Consequence parameter '%s: %s' not assignable from Fact '%s: %s'"
-            .format(paramType._1, paramType._2.getName, declaration.getIdentifier, factClazz.getName))
+          throw new RuleBuildException("Consequence parameter '%s: %s' not assignable from Fact '%s: %s'"
+            .format(paramInfo._1, paramInfo._2.getName, declaration.getIdentifier, factClazz.getName))
         }
       }
     }}
