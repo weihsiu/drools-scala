@@ -385,6 +385,39 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule2_invoked must_== true
   }
 
+  //---- Sugar ----
+
+  @Test def sugar {
+    var rule1_invoked = false
+    var rule2_invoked = false
+
+    new Package("mypackage") {
+
+      import RichDialect._
+      
+      Import[FactOne]
+      Import[FactTwo];
+
+      """
+        f1_1: FactOne()
+        f2_1: FactTwo()
+      """ ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+        rule1_invoked = true
+      };
+
+      """
+        f1_1: FactOne()
+        f2_1: FactTwo()
+      """ ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+        rule2_invoked = true
+      }
+    }
+
+    insertAllFactsAndFire
+    rule1_invoked must_== true
+    rule2_invoked must_== true
+  }
+
 
 //  @Test def mvel_consequence {
 //    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dialect/mvel_dialect.drl"))
