@@ -305,7 +305,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     builder.knowledgePackages.head.getRules.map(_.getName) must haveTheSameElementsAs (List("rule_1", "rule_2"))
   }
 
-  // This is the default drools behavior. It would be nice to get a warning though
+  // This is the default drools behavior, but it would be nice to get a warning.
   @Test def rule_with_same_name_overrides_previous {
     var rule1_invoked = false
     var rule2_invoked = false
@@ -335,8 +335,8 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
 
       Rule("rule",
         salience = 10,
-        agendaGroup = Some("agenda_group"),
-        ruleflowGroup = Some("ruleflow_group"),
+        agendaGroup = "agenda_group",
+        ruleflowGroup = "ruleflow_group",
         lockOnActive = true,
         noLoop = true) 
       .when {"""
@@ -414,16 +414,61 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule2_invoked must_== true
   }
 
+  @Test def non_inner_rule_syntax {
+    var rule1_invoked = false
+    var rule2_invoked = false
 
-//  @Test def mvel_consequence {
-//    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dialect/mvel_dialect.drl"))
-//    import drools._
-//    import RichDrools._
-//
-//    val f1_1 = FactOne("f1_1")
-//    session insert f1_1
-//    session fireAllRules
-//  }
+    val p = new Package("mypackage") {
+      Import[FactOne]
+      Import[FactTwo]
+    }
 
+    p.Rule("p.rule1") {"""
+        f1_1: FactOne()
+        f2_1: FactTwo()
+      """} ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+        rule1_invoked = true
+      }
+
+    p.Rule("p.rule2", salience = 10) {"""
+      f1_1: FactOne()
+      f2_1: FactTwo()
+    """} ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+      rule2_invoked = true
+    }
+
+    insertAllFactsAndFire
+    rule1_invoked must_== true
+    rule2_invoked must_== true
+  }
+
+  @Test def non_inner_rule_using_import_syntax {
+    var rule1_invoked = false
+    var rule2_invoked = false
+
+    val p = new Package("mypackage") {
+      Import[FactOne]
+      Import[FactTwo]
+    }
+    import p.Rule
+
+    Rule("p.rule1") {"""
+        f1_1: FactOne()
+        f2_1: FactTwo()
+      """} ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+        rule1_invoked = true
+      }
+
+    Rule("p.rule2", salience = 10) {"""
+      f1_1: FactOne()
+      f2_1: FactTwo()
+    """} ==> { (f1_1: FactOne, f2_1: FactTwo) =>
+      rule2_invoked = true
+    }
+
+    insertAllFactsAndFire
+    rule1_invoked must_== true
+    rule2_invoked must_== true
+  }
 
 }

@@ -6,7 +6,7 @@ import org.drools.builder.{ResourceType, KnowledgeBuilderFactory}
 import org.drools.rule.builder.{RuleBuildContext, ConsequenceBuilder}
 import org.drools.rule.Declaration
 import org.drools.WorkingMemory
-import org.drools.spi.{KnowledgeHelper, Consequence, AgendaGroup}
+import org.drools.spi.{KnowledgeHelper, Consequence}
 
 import com.thoughtworks.paranamer.BytecodeReadingParanamer
 import memelet.drools.scala.ScalaExtensions
@@ -24,8 +24,7 @@ class ScalaPackageBuilder {
   private val paranamer = new BytecodeReadingParanamer
   private val paramInfoCache = new WeakHashMap[Class[_], Map[String,Class[_]]]
 
-  private[dialect] def lookupParameterInfo(functionClazz: Class[_]): Map[String,Class[_]] = {
-
+  private[dialect] def lookupParameterInfo(functionClazz: Class[_]): Map[String,Class[_]] =
     paramInfoCache.get(functionClazz) getOrElse {
       val applyMethod = functionClazz.getMethods.filter(m => m.getName == "apply" && m.getReturnType == java.lang.Void.TYPE).head
       val paramNames = paranamer.lookupParameterNames(applyMethod)
@@ -34,7 +33,6 @@ class ScalaPackageBuilder {
       paramInfoCache += (functionClazz -> paramInfo)
       paramInfo
     }
-  }
 
   class RuleBuildException(message: String) extends RuntimeException(message)
 
@@ -72,11 +70,14 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
     importDescriptors = importDescriptors appendBack ("import "+manifest[T].erasure.getName+"\n")
   }
 
+  implicit def stringToOption(value: String) = Option(value) 
+  implicit def booleanToOption(value: Boolean) = Option(value)
+
   //TODO Add remaining properties
   //TODO Dynamic salience (similar to MVELSalienceBuilder)
   //TODO Dynamic enabled (similar to MVELEnabledBuilder)
   case class Rule (name: String = generateRuleName, salience: Int = defaultSalience, agendaGroup: Option[String] = None,
-                   ruleflowGroup: Option[String] = None, lockOnActive: Boolean = false, noLoop: Boolean = false) {
+                   ruleflowGroup: Option[String] = None, lockOnActive: Option[Boolean] = None, noLoop: Option[Boolean] = None) {
 
     ruleCount += 1
     private[dialect] var lhs: Option[String] = None
@@ -85,7 +86,9 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
       this.lhs = Some(lhs)
       this
     }
-    def apply(lhs: String): Rule = when(lhs)
+    def apply(lhs: String): Rule = {
+      when(lhs)
+    }
 
     def then(rhs: Function0[Unit]) { (new RuleBuilder0(this, rhs)).build }
     def then[T1](rhs: Function1[T1,Unit]) { (new RuleBuilder1(this, rhs)).build }
@@ -114,24 +117,25 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
 
   private[dialect] abstract class RuleBuilder(descriptor: Rule) {
 
-    def quotedAttribute(name: String, value: Option[String]) = value match {
-      case Some(value) => name + " \"" + value + "\""
+    private def attribute(quote: Char)(name: String, value: Option[Any]) = value match {
+      case Some(value) => name + " " + quote + value + quote
       case None => ""
     }
-    def booleanAttribute(name: String, value: Boolean) = name + " " + value
+    private def stringAttribute = attribute(quote = '"') _
+    private def valueAttribute = attribute(quote = ' ') _
 
-    def packagedDrl: String = {
+    private def packagedDrl: String = {
       """
       package %s
       %s
       import scala.Option
       global scala.None$ None
-      rule "%s" dialect "scala"
+      rule "%s" dialect "embedded-scala"
         salience %d
-        %s
-        %s
-        %s
-        %s
+        %s //agenda-group
+        %s //ruleflow-group
+        %s //no-loop
+        %s //lock-on-active
       when
         %s
       then
@@ -141,10 +145,10 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
                  if (importDescriptors.isEmpty) "" else importDescriptors reduceLeft (_ ++ _),
                  descriptor.name,
                  descriptor.salience,
-                 quotedAttribute("agenda-group", descriptor.agendaGroup),
-                 quotedAttribute("ruleflow-group", descriptor.ruleflowGroup),
-                 booleanAttribute("no-loop", descriptor.noLoop),
-                 booleanAttribute("lock-on-active", descriptor.lockOnActive),
+                 stringAttribute("agenda-group", descriptor.agendaGroup),
+                 stringAttribute("ruleflow-group", descriptor.ruleflowGroup),
+                 valueAttribute("no-loop", descriptor.noLoop),
+                 valueAttribute("lock-on-active", descriptor.lockOnActive),
                  descriptor.lhs.get)
     }
 
@@ -153,6 +157,7 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
     def build {
       ScalaConsequenceBuilder.builderStack.push(this)
       try {
+        //println(packagedDrl)
         kbuilder.add(ResourceFactory.newReaderResource(new StringReader(packagedDrl)), ResourceType.DRL)
         if (kbuilder.hasErrors) throw new RuleBuildException(kbuilder.getErrors.mkString(","))
       } finally {
@@ -172,7 +177,7 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
       case paramClazz if paramClazz.isAssignableFrom(classOf[WorkingMemory]) => //ok
       case paramClazz => {
         val declaration = declarations.get(paramInfo._1) getOrElse {
-          throw new RuleBuildException("Consequence parameter '%s: %s' does not match any fact identifiers"
+          throw new RuleBuildException("Consequence parameter '%s: %s' does not match any fact identifiers (missing Import?)"
             .format(paramInfo._1, paramInfo._2.getName))
         }
         val factClazz = declaration.getExtractor.getExtractToClass

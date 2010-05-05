@@ -7,7 +7,7 @@ import org.drools.compiler.{PackageBuilder, PackageRegistry}
 class ScalaEmbeddedDialect(builder: PackageBuilder,
                            pkgRegistry: PackageRegistry,
                            pkg: org.drools.rule.Package)
-        extends MVELDialect(builder, pkgRegistry, pkg, "scala") {
+        extends MVELDialect(builder, pkgRegistry, pkg, "embedded-scala") {
 
   override def getConsequenceBuilder: ConsequenceBuilder = ScalaConsequenceBuilder
 
