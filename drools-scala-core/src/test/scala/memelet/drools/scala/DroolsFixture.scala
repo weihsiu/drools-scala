@@ -16,9 +16,9 @@ case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.e
     System.setProperty("drools.dialect.java.lngLevel", "1.6");
     System.setProperty("drools.dialect.mvel.strict", "false") //default=true
     System.setProperty("drools.dialect.mvel.langLevel", "4")  //default=4
-    DroolsBuilder
-            .buildKnowledgeBase(DroolsBuilder.buildKnowledgePackages(rules), EventProcessingOption.STREAM)
-            .statefulSession(ClockTypeOption.get("pseudo"))
+    import DroolsBuilder._
+    newKnowledgeBase(buildFileDrls(rules), Seq(EventProcessingOption.STREAM))
+      .newScalaStatefulKnowledgeSession(Seq(ClockTypeOption.get("pseudo")))
   }
 
   if (debug) {

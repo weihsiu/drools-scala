@@ -39,10 +39,13 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   var actual_f4_1: FactFour = _
   var actual_f4_2: FactFour = _
 
+  import RichDrools._
+
   implicit val builder = new ScalaPackageBuilder
   lazy val session = {
-    val session = DroolsBuilder.buildKnowledgeBase(builder.knowledgePackages, EventProcessingOption.STREAM)
-                               .statefulSession(ClockTypeOption.get("pseudo"))
+    import DroolsBuilder._
+    val session = newKnowledgeBase(builder.knowledgePackages, Seq(EventProcessingOption.STREAM))
+                    .newScalaStatefulKnowledgeSession(Seq(ClockTypeOption.get("pseudo")), builder.globals)
     //DroolsDebug.debugWorkingMemory(session)
     //DroolsDebug.debugAgenda(session)
     session
@@ -226,6 +229,20 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
         // noop
       }
     } must throwA[builder.RuleBuildException]
+  }
+
+  @Test def globals_added_to_session {
+    new Package {
+      Global("factOne" -> new FactOne("f1_1"))
+      Rule("rule") when {"""
+        f1_1: FactOne()
+      """} then { () =>
+        // noop
+      }
+    }
+
+    val g = session.getGlobal("factOne")
+    g must notBeNull 
   }
 
   @Test def package_name_defaults_to_containing_scala_class_package {

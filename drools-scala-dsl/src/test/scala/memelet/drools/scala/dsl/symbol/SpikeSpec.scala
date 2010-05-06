@@ -175,7 +175,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
 //    val rz = when[FactOne](f1 => f1.name ~== r1.name)
 //  }
 
-  @Test def createFromDsl {
+  @Ignore @Test def createFromDsl {
     import DroolsDsl._
 
     val kbase: KnowledgeBase = KnowledgeBaseFactory.newKnowledgeBase()

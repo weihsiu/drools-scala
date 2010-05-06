@@ -6,3 +6,6 @@ _gsdata_
 *.ipr
 *.iml
 *.log
+project/build/target
+project/boot
+project/plugins/project

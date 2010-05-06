@@ -3,120 +3,29 @@ package memelet.drools.scala
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConversions._
 import org.joda.time.{Period, DateTime, DateTimeUtils}
-import java.io.StringReader
+import org.drools.runtime.conf.{ClockTypeOption}
+import org.drools.runtime._
 //
-import org.drools.{FactException, KnowledgeBase, KnowledgeBaseFactory}
+import org.drools.{FactException, KnowledgeBase}
 import org.drools.event.rule._
 import org.drools.time.{TimerService, SessionPseudoClock, SessionClock}
-import org.drools.conf.{KnowledgeBaseOption}
 import org.drools.runtime.rule.{WorkingMemoryEntryPoint, AgendaFilter, FactHandle}
-import org.drools.runtime.conf.ClockTypeOption
-import org.drools.runtime.{ObjectFilter, Globals, StatefulKnowledgeSession}
-import org.drools.io.{ResourceFactory, Resource}
-import org.drools.definition.KnowledgePackage
-import org.drools.builder.impl.KnowledgeBuilderImpl
-import org.drools.builder.{KnowledgeBuilder, ResourceType, KnowledgeBuilderFactory}
-import org.drools.builder.conf.EvaluatorOption
-
-object ScalaExtensions {
-  
-  val scalaDrls = Seq("memelet/drools/scala/drools_scala_predef.drl")
-
-  def defineScalaDrlElements(kbuilder: KnowledgeBuilder) {
-    scalaDrls.foreach { filename =>
-       kbuilder.add(ResourceFactory.newClassPathResource(filename), ResourceType.DRL)
-    }
-  }
-
-  def setScalaGlobals(ksession: StatefulKnowledgeSession) {
-    ksession.setGlobal("None", None)
-  }
-
-  def registerScalaEvaluators(kbuilder: KnowledgeBuilder) {
-    val kbuilderConfig = kbuilder.asInstanceOf[KnowledgeBuilderImpl].getPackageBuilder.getPackageBuilderConfiguration
-    val chainedProperties = kbuilderConfig.getChainedProperties
-    val evaluatorRegistry = kbuilderConfig.getEvaluatorRegistry
-
-    val scalaEntries = new java.util.HashMap[String, String]
-    chainedProperties.mapStartsWith(scalaEntries, EvaluatorOption.PROPERTY_NAME+"scala_", true)
-    for (className <- scalaEntries.values) {
-      evaluatorRegistry.addEvaluatorDefinition(className)
-    }
-  }
-
-}
-
-object DroolsBuilder {
-
-  def buildKnowledgePackages(drlFilenames: Iterable[String]) : Iterable[KnowledgePackage] = {
-    val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
-    ScalaExtensions.registerScalaEvaluators(kbuilder)
-
-    ScalaExtensions.defineScalaDrlElements(kbuilder)
-    drlFilenames.foreach { filename =>
-       kbuilder.add(ResourceFactory.newClassPathResource(filename), ResourceType.DRL)
-    }
-
-    if (kbuilder.hasErrors) {
-      throw new RuntimeException(kbuilder.getErrors.mkString(","))
-    }
-    kbuilder.getKnowledgePackages
-  }
-
-  def buildKnowledgePackagesFromStrings(drls: Iterable[String]) : Iterable[KnowledgePackage] = {
-    val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
-    ScalaExtensions.registerScalaEvaluators(kbuilder)
-    drls.foreach { drl =>
-       kbuilder.add(ResourceFactory.newReaderResource(new StringReader(drl)), ResourceType.DRL)
-    }
-
-    if (kbuilder.hasErrors) {
-      throw new RuntimeException(kbuilder.getErrors.mkString(","))
-    }
-    kbuilder.getKnowledgePackages
-  }
-
-  def buildKnowledgeBase(kbaseOptions: KnowledgeBaseOption*): RichDrools.RichKnowledgeBase = buildKnowledgeBase(List.empty, kbaseOptions: _*)
-
-  def buildKnowledgeBase(knowledgePackages: Iterable[KnowledgePackage], kbaseOptions: KnowledgeBaseOption*): RichDrools.RichKnowledgeBase = {
-    val kbaseConfig = KnowledgeBaseFactory.newKnowledgeBaseConfiguration()
-    kbaseOptions.foreach { kbaseConfig.setOption(_) }
-    val kbase = KnowledgeBaseFactory.newKnowledgeBase(kbaseConfig)
-    kbase.addKnowledgePackages(knowledgePackages)
-    new RichDrools.RichKnowledgeBase(kbase)
-  }
-}
 
 object RichDrools {
 
-  def knowledgePackages(drlFilenames: Iterable[String]) : Iterable[KnowledgePackage] = {
-    val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
-
-    for (drlFilename <- drlFilenames) {
-      val resource: Resource = ResourceFactory.newClassPathResource(drlFilename, getClass)
-      kbuilder.add(resource, ResourceType.DRL)
-    }
-    if (kbuilder.hasErrors) {
-      throw new RuntimeException(kbuilder.getErrors.toString)
-    }
-
-    kbuilder.getKnowledgePackages
-  }
-  def knowledgePackage(drlFilename: String) : Iterable[KnowledgePackage] = knowledgePackages(Seq(drlFilename))
-
-  //---- ---- ----
-
   class RichKnowledgeBase(val kbase: KnowledgeBase) {
 
-    def addKnowledgePackages(drlFilenames: Iterable[String]) {
-      kbase.addKnowledgePackages(DroolsBuilder.buildKnowledgePackages(drlFilenames))
+    def addFilesDrls(drlFilenames: Iterable[String]) {
+      kbase.addKnowledgePackages(DroolsBuilder.buildFileDrls(drlFilenames))
+    }
+    def addStringDrls(drlStrings: Iterable[String]) {
+      kbase.addKnowledgePackages(DroolsBuilder.buildStringDrls(drlStrings))
     }
 
-    def statefulSession(implicit clockType: ClockTypeOption = RichDrools.REALTIME_CLOCK_OPTION) = {
-      val ksessionConfig = KnowledgeBaseFactory.newKnowledgeSessionConfiguration()
-      ksessionConfig.setOption(clockType)
+    def newScalaStatefulKnowledgeSession(ksessionConfig: KnowledgeSessionConfiguration, globals: Map[String, AnyRef] = Map.empty) = {
       val ksession: StatefulKnowledgeSession = kbase.newStatefulKnowledgeSession(ksessionConfig, null)
       ScalaExtensions.setScalaGlobals(ksession)
+      ksession.addGlobals(globals)
       ksession
     }
 
@@ -130,7 +39,7 @@ object RichDrools {
     def knowledgeBase = session.getKnowledgeBase
 
     def addPackages(drlFilenames: Iterable[String]) {
-      knowledgeBase.addKnowledgePackages(DroolsBuilder.buildKnowledgePackages(drlFilenames))
+      knowledgeBase.addKnowledgePackages(DroolsBuilder.buildFileDrls(drlFilenames))
     }
 
     def addGlobal(identifier: String, value: AnyRef) =

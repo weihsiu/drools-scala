@@ -18,11 +18,27 @@ import scala.collection.JavaConversions._
 
 class ScalaPackageBuilder {
 
+  def warn(message: String) { println("WARN "+message) }
+
   private[dialect] val kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder
   ScalaExtensions.registerScalaEvaluators(kbuilder)
 
   private val paranamer = new BytecodeReadingParanamer
   private val paramInfoCache = new WeakHashMap[Class[_], Map[String,Class[_]]]
+
+  private var builderGlobals: Map[String, AnyRef] = Map.empty
+  def globals = builderGlobals
+  private[dialect] def addGlobals(globals: Map[String,AnyRef]) {
+    globals.foreach { g =>
+      if (this.builderGlobals.contains(g._1)) {
+        val prevValue = this.builderGlobals(g._1)
+        warn("Duplicate global: \n" +
+          "  pre: name=%s, value=%s\n".format(g._1, prevValue) +
+          " this: name=%s, value=%s\n".format(g._1, g._2))
+      }
+    }
+    this.builderGlobals ++= globals
+  }
 
   private[dialect] def lookupParameterInfo(functionClazz: Class[_]): Map[String,Class[_]] =
     paramInfoCache.get(functionClazz) getOrElse {
@@ -64,10 +80,15 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
   private def generateRuleName = this.name + ".rule#" + (ruleCount+1)
 
   private var importDescriptors: Vector[String] = Vector.empty
+  private var packageGlobals: Map[String, AnyRef] = Map.empty
   private def defaultSalience = 0
 
   def Import[T: Manifest] {
     importDescriptors = importDescriptors appendBack ("import "+manifest[T].erasure.getName+"\n")
+  }
+
+  def Global[T <: AnyRef : Manifest](global: (String, T)) {
+    packageGlobals += global
   }
 
   implicit def stringToOption(value: String) = Option(value) 
@@ -124,12 +145,15 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
     private def stringAttribute = attribute(quote = '"') _
     private def valueAttribute = attribute(quote = ' ') _
 
+    private def globalDrl(global: (String, AnyRef)) = "global %s %s\n".format(global._2.getClass.getName, global._1)
+
     private def packagedDrl: String = {
       """
       package %s
       %s
       import scala.Option
       global scala.None$ None
+      %s
       rule "%s" dialect "embedded-scala"
         salience %d
         %s //agenda-group
@@ -143,6 +167,7 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
       end
       """.format(Option(Package.this.name) getOrElse Package.this.getClass.getPackage.getName,
                  if (importDescriptors.isEmpty) "" else importDescriptors reduceLeft (_ ++ _),
+                 if (packageGlobals.isEmpty) "" else packageGlobals map (globalDrl) reduceLeft (_ ++ _),
                  descriptor.name,
                  descriptor.salience,
                  stringAttribute("agenda-group", descriptor.agendaGroup),
@@ -160,6 +185,7 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
         //println(packagedDrl)
         kbuilder.add(ResourceFactory.newReaderResource(new StringReader(packagedDrl)), ResourceType.DRL)
         if (kbuilder.hasErrors) throw new RuleBuildException(kbuilder.getErrors.mkString(","))
+        addGlobals(packageGlobals)
       } finally {
         ScalaConsequenceBuilder.builderStack.pop
       }
