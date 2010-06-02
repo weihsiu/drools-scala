@@ -40,9 +40,9 @@ case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.e
 
   var factEvents = Vector[WorkingMemoryEvent]()
   session addEventListener new WorkingMemoryEventListener {
-    def objectInserted(e: ObjectInsertedEvent) = factEvents = factEvents.appendBack(e)
-    def objectRetracted(e: ObjectRetractedEvent) = factEvents = factEvents.appendBack(e)
-    def objectUpdated(e: ObjectUpdatedEvent) = factEvents = factEvents.appendBack(e)
+    def objectInserted(e: ObjectInsertedEvent) = factEvents = factEvents :+ e
+    def objectRetracted(e: ObjectRetractedEvent) = factEvents = factEvents :+ e
+    def objectUpdated(e: ObjectUpdatedEvent) = factEvents = factEvents :+ e
   }
 
   def events[T: Manifest]: Seq[T] = {

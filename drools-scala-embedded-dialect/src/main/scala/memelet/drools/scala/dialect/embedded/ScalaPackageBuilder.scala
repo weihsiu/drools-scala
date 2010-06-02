@@ -84,7 +84,7 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
   private def defaultSalience = 0
 
   def Import[T: Manifest] {
-    importDescriptors = importDescriptors appendBack ("import "+manifest[T].erasure.getName+"\n")
+    importDescriptors = importDescriptors :+ ("import "+manifest[T].erasure.getName+"\n")
   }
 
   def Global[T <: AnyRef : Manifest](global: (String, T)) {
