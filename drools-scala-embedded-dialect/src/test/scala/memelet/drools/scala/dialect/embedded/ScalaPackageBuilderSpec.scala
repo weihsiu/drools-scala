@@ -537,6 +537,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule2_invoked must_== true
   }
 
+  //TODO These are probably not testing the default for ScalaPackageBuilder,
+  // but there is production code that verifies its working. Maybe completely 
+  // seperate test is needed...
+
   @Test def single_package_syntax {
 
     val p = new DroolsPackage {

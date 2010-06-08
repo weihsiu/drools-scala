@@ -6,18 +6,20 @@ import org.drools.event.rule._
 import org.drools.runtime.{ObjectFilter, StatefulKnowledgeSession}
 import org.drools.time.SessionPseudoClock
 import java.util.concurrent.TimeUnit
+import org.drools.definition.KnowledgePackage
 
-case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty,
+case class DroolsFixture(drls: Seq[String] = Seq.empty, knowledgePackages: Seq[KnowledgePackage] = Seq.empty, 
+                         globals: Map[String,AnyRef] = Map.empty, facts: Seq[AnyRef] = Seq.empty,
         debug: Boolean = false) {
 
   import RichDrools._
 
   implicit val session: StatefulKnowledgeSession = {
-    System.setProperty("drools.dialect.java.lngLevel", "1.6");
+    System.setProperty("drools.dialect.java.langLevel", "1.6");
     System.setProperty("drools.dialect.mvel.strict", "false") //default=true
     System.setProperty("drools.dialect.mvel.langLevel", "4")  //default=4
     import DroolsBuilder._
-    newKnowledgeBase(buildFileDrls(rules), Seq(EventProcessingOption.STREAM))
+    newKnowledgeBase(buildFileDrls(drls) ++ knowledgePackages, Seq(EventProcessingOption.STREAM))
       .newScalaStatefulKnowledgeSession(Seq(ClockTypeOption.get("pseudo")))
   }
 
