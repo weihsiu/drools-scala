@@ -59,7 +59,7 @@ class ScalaPackageBuilder {
 
 private[dialect] object ScalaConsequenceBuilder extends ConsequenceBuilder {
 
-  private[dialect] val builderStack = new Stack[Package#RuleBuilder]
+  private[dialect] val builderStack = new Stack[DroolsPackage#RuleBuilder]
 
   def build(context: RuleBuildContext) {
     context.getBuildStack.push(context.getRule.getLhs)
@@ -73,7 +73,7 @@ private[dialect] object ScalaConsequenceBuilder extends ConsequenceBuilder {
   }
 }
 
-object Package {
+object DroolsPackage {
   private var index = 0
   def uniqueName = {
     index += 1
@@ -81,9 +81,9 @@ object Package {
   }
 }
 
-class Package(name: String = null)(implicit val builder: ScalaPackageBuilder = new ScalaPackageBuilder) {
+class DroolsPackage(name: String = null)(implicit val builder: ScalaPackageBuilder = new ScalaPackageBuilder) {
 
-  def actualName = Option(Package.this.name) getOrElse Package.this.getClass.getPackage.getName
+  def actualName = Option(DroolsPackage.this.name) getOrElse DroolsPackage.this.getClass.getPackage.getName
 
   def knowledgePackage: KnowledgePackage = {
     builder.knowledgePackages find (_.getName == actualName) getOrElse {
