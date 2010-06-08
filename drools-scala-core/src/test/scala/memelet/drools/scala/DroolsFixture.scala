@@ -26,13 +26,12 @@ case class DroolsFixture(rules: Seq[String], globals: Map[String,AnyRef] = Map.e
     debugAgenda
   }
 
-  globals.foreach(global => session addGlobal (global._1, global._2))
-  facts.foreach(fact => session insert fact)
+  globals foreach (global => session addGlobal (global._1, global._2))
+  facts foreach (fact => session insert fact)
 
   val sessionClock = session.getSessionClock.asInstanceOf[SessionPseudoClock]
   def advanceTimeMillis(millis: Long) = sessionClock.advanceTime(millis, TimeUnit.MILLISECONDS)
   
-
   var rulesFired = List[String]()
   session.onAfterActivationFired{ e: AfterActivationFiredEvent =>
     rulesFired = e.getActivation.getRule.getName :: rulesFired

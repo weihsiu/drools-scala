@@ -11,12 +11,13 @@ import org.junit.{Ignore, Test}
 import org.drools.WorkingMemory
 import org.drools.definitions.rule.impl.RuleImpl
 import memelet.drools.scala._
+import org.drools.definition.KnowledgePackage
 
-class FactOne(name: String)
-class FactTwo(name: String, f: FactOne)
-class FactThree(name: String, f: FactOne)
-class FactFour(name: String)
-class FactOneSub(name: String) extends FactOne(name)
+class FactOne(val name: String)
+class FactTwo(val name: String, val f: FactOne)
+class FactThree(val name: String, val f: FactOne)
+class FactFour(val name: String)
+class FactOneSub(val subname: String) extends FactOne(subname)
 
 class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
 
@@ -208,6 +209,32 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     actual_wm must notBeNull
   }
 
+  @Test def consequence_invoked_with_args_and_special_args {
+    var actual_kh: KnowledgeHelper = null
+    var actual_wm: WorkingMemory = null
+
+    new Package {
+      Import[FactOne]
+      Import[FactTwo]
+
+      Rule("rule") when {"""
+        f1_1: FactOne()
+        f2_1: FactTwo()
+      """} then { (f1_1: FactOne, f2_1: FactTwo, kh: KnowledgeHelper, wm: WorkingMemory) =>
+        actual_f1_1 = f1_1
+        actual_f2_1 = f2_1
+        actual_kh = kh
+        actual_wm = wm
+      }
+    }
+
+    insertAllFactsAndFire
+    actual_f1_1 must_== f1_1
+    actual_f2_1 must_== f2_1
+    actual_kh must notBeNull
+    actual_wm must notBeNull
+  }
+
   @Test def exception_thrown_for_malformed_lhs {
     new Package {
       Import[FactOne]
@@ -241,8 +268,8 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    val g = session.getGlobal("factOne")
-    g must notBeNull 
+    val g = session.getGlobal("factOne").asInstanceOf[FactOne]
+    g.name must_== "f1_1"
   }
 
   @Test def package_name_defaults_to_containing_scala_class_package {
@@ -402,6 +429,28 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule2_invoked must_== true
   }
 
+  @Test def multiline_syntax {
+    var rule1_invoked = false
+    var rule2_invoked = false
+
+    new Package("mypackage") {
+
+      Import[FactOne]
+      Import[FactTwo]
+
+      Rule("rule1")
+      .when{"""
+        f1_1: FactOne()
+        f2_1: FactTwo()"""}
+      .then { (f1_1: FactOne, f2_1: FactTwo) =>
+        rule1_invoked = true
+      }
+    }
+
+    insertAllFactsAndFire
+    rule1_invoked must_== true
+  }
+
   @Test def concise_syntax {
     var rule1_invoked = false
     var rule2_invoked = false
@@ -487,5 +536,48 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule1_invoked must_== true
     rule2_invoked must_== true
   }
+
+  @Test def single_package_syntax {
+
+    val p = new Package {
+
+      Import[FactOne]
+      Import[FactTwo]
+
+      Rule("rule1")
+      .when{"""
+        f1_1: FactOne()
+        f2_1: FactTwo()"""}
+      .then { (f1_1: FactOne, f2_1: FactTwo) =>
+        //
+      }
+    }
+
+    val kp: KnowledgePackage = p.knowledgePackage
+    kp.getRules filter (_.getName == "rule1") must notBeNull
+
+  }
+
+  @Test def single_package_subclass_syntax {
+
+    class MyRules extends Package {
+
+      Import[FactOne]
+      Import[FactTwo]
+
+      Rule("rule1")
+      .when{"""
+        f1_1: FactOne()
+        f2_1: FactTwo()"""}
+      .then { (f1_1: FactOne, f2_1: FactTwo) =>
+        //
+      }
+    }
+
+    val kp: KnowledgePackage = (new MyRules).knowledgePackage
+    kp.getRules filter (_.getName == "rule1") must notBeNull
+
+  }
+
 
 }

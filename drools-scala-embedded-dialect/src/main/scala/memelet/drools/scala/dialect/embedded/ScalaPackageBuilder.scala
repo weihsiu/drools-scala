@@ -15,6 +15,7 @@ import scala.collection.mutable.{WeakHashMap, Stack}
 import java.util.{Map => jMap}
 import scala.collection.{Map => sMap}
 import scala.collection.JavaConversions._
+import org.drools.definition.KnowledgePackage
 
 class ScalaPackageBuilder {
 
@@ -72,7 +73,23 @@ private[dialect] object ScalaConsequenceBuilder extends ConsequenceBuilder {
   }
 }
 
-class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
+object Package {
+  private var index = 0
+  def uniqueName = {
+    index += 1
+    "scala_package_" + index
+  }
+}
+
+class Package(name: String = null)(implicit val builder: ScalaPackageBuilder = new ScalaPackageBuilder) {
+
+  def actualName = Option(Package.this.name) getOrElse Package.this.getClass.getPackage.getName
+
+  def knowledgePackage: KnowledgePackage = {
+    builder.knowledgePackages find (_.getName == actualName) getOrElse {
+      throw new IllegalStateException("Could not obtain package: name='%s'".format(actualName))
+    }
+  }
 
   import builder._
 
@@ -165,7 +182,7 @@ class Package(name: String = null)(implicit val builder: ScalaPackageBuilder) {
       then
         // placeholder for parser
       end
-      """.format(Option(Package.this.name) getOrElse Package.this.getClass.getPackage.getName,
+      """.format(actualName,
                  if (importDescriptors.isEmpty) "" else importDescriptors reduceLeft (_ ++ _),
                  if (packageGlobals.isEmpty) "" else packageGlobals map (globalDrl) reduceLeft (_ ++ _),
                  descriptor.name,
