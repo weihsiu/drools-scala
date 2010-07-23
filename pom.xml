@@ -21,11 +21,11 @@
     <drools.scala.version>1.0-SNAPSHOT</drools.scala.version>
 
     <drools.version>5.1.0.M1</drools.version>
-    <scala.version>2.8.0.RC3</scala.version>
+    <scala.version>2.8.0</scala.version>
 
     <joda.time.version>1.6</joda.time.version>
-    <scala.time.artifactId>time_2.8.0.RC3</scala.time.artifactId>
-    <scala.time.version>0.2-SNAPSHOT</scala.time.version>
+    <scala.time.artifactId>scala-time_2.8.0</scala.time.artifactId>
+    <scala.time.version>0.2-SI</scala.time.version>
 
     <slf4j.version>1.5.8</slf4j.version>
     <logback.version>0.9.18</logback.version>
@@ -34,10 +34,10 @@
     <mockito.version>1.8.4</mockito.version>
     <objenesis.version>1.2</objenesis.version>
     <hamcrest.version>1.1</hamcrest.version>
-    <specs.artifactId>specs_2.8.0.RC3</specs.artifactId>
-    <specs.version>1.6.5-SNAPSHOT</specs.version>
-    <scalacheck.artifactId>scalacheck_2.8.0.Beta1</scalacheck.artifactId>
-    <scalacheck.version>1.7-SNAPSHOT</scalacheck.version>
+    <specs.artifactId>specs_2.8.0</specs.artifactId>
+    <specs.version>1.6.5</specs.version>
+    <scalacheck.artifactId>scalacheck_2.8.0</scalacheck.artifactId>
+    <scalacheck.version>1.7</scalacheck.version>
     <cglib.version>2.1_3</cglib.version>
 
     <paranamer.version>2.2</paranamer.version>

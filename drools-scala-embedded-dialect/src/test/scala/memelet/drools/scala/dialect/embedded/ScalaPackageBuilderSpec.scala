@@ -19,6 +19,8 @@ class FactThree(val name: String, val f: FactOne)
 class FactFour(val name: String)
 class FactOneSub(val subname: String) extends FactOne(subname)
 
+//TODO Imports of nested classes don't seem to be working
+
 class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
 
   val f1_1 = new FactOne("f1_1#instance")

@@ -200,7 +200,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
   //=================================================================================================================
 
   @Test def mvelUsingCompiler {
-    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/symbol/spike_spec_mvel.drl"))
+    val drools = DroolsFixture(drls = Seq("memelet/drools/scala/dsl/symbol/spike_spec_mvel.drl"))
     import drools._
     import RichDrools._
 
@@ -214,7 +214,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
   }
 
   @Test def javaUsingCompiler {
-    val drools = DroolsFixture(rules = Seq("memelet/drools/scala/dsl/symbol/spike_spec_java.drl"))
+    val drools = DroolsFixture(drls = Seq("memelet/drools/scala/dsl/symbol/spike_spec_java.drl"))
     import drools._
     import RichDrools._
 
