@@ -1,0 +1,10 @@
+package memelet.drools.scala.dialect.embedded
+
+rule "mvel_with_from_java_list" dialect "mvel"
+when
+  b: JB()
+  a: A(msg=="world") from b.content
+then
+  //System.out.println("*** mvel: a=" + a);
+end
+

@@ -61,7 +61,7 @@ private[dialect] object ScalaConsequenceBuilder extends ConsequenceBuilder {
 
   private[dialect] val builderStack = new Stack[DroolsPackage#RuleBuilder]
 
-  def build(context: RuleBuildContext) {
+  def build(context: RuleBuildContext, name: String) {
     context.getBuildStack.push(context.getRule.getLhs)
     try {
       val declarations = context.getDeclarationResolver.getDeclarations(context.getRule)
@@ -240,6 +240,8 @@ class DroolsPackage(name: String = null)(implicit val builder: ScalaPackageBuild
         }}
       doEvaluate(knowledgeHelper, workingMemory, facts)
     }
+
+    def getName = "<function>"
 
   }
 
