@@ -1,8 +1,6 @@
 package memelet.drools.scala.dialect.embedded
 package test
 
-import org.specs.SpecsMatchers
-import org.specs.mock.Mockito
 import org.drools.runtime.conf.ClockTypeOption
 import org.drools.conf.EventProcessingOption
 import org.drools.spi.KnowledgeHelper
@@ -12,6 +10,8 @@ import org.drools.WorkingMemory
 import org.drools.definitions.rule.impl.RuleImpl
 import memelet.drools.scala._
 import org.drools.definition.KnowledgePackage
+import org.specs2.matcher.JUnitMustMatchers
+import org.specs2.mock.Mockito
 
 class FactOne(val name: String)
 class FactTwo(val name: String, val f: FactOne)
@@ -21,7 +21,7 @@ class FactOneSub(val subname: String) extends FactOne(subname)
 
 //TODO Imports of nested classes don't seem to be working
 
-class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
+class ScalaPackageBuilderSpec extends JUnitMustMatchers with Mockito {
 
   val f1_1 = new FactOne("f1_1#instance")
   val f1_2 = new FactOne("f1_2#instance")
@@ -54,7 +54,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     session
   }
 
-  def insertAllFactsAndFire {
+  def insertAllFactsAndFire() {
     session insert f1_1
     session insert f1_2
     session insert f2_1
@@ -63,10 +63,10 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     session insert f3_2
     session insert f4_1
     session insert f4_2
-    session fireAllRules
+    session fireAllRules()
   }
 
-  @Test def consequence_invoked_with_args {
+  @Test def consequence_invoked_with_args() {
     new DroolsPackage {
       Import[FactOne]
       Import[FactTwo]
@@ -80,12 +80,12 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     actual_f1_1 must_== f1_1
     actual_f2_1 must_== f2_1
   }
 
-  @Test def consequence_invoked_with_zero_args {
+  @Test def consequence_invoked_with_zero_args() {
     var invoked = false
 
     new DroolsPackage {
@@ -98,11 +98,11 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     invoked must beTrue
   }
 
-  @Test def consequence_invoked_with_args_when_args_are_out_of_order {
+  @Test def consequence_invoked_with_args_when_args_are_out_of_order() {
     new DroolsPackage {
       Import[FactOne]
       Import[FactTwo]
@@ -116,12 +116,12 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     actual_f1_1 must_== f1_1
     actual_f2_1 must_== f2_1
   }
 
-  @Test def exception_thrown_for_missing_fact {
+  @Test def exception_thrown_for_missing_fact() {
     new DroolsPackage {
       Import[FactOne]
       Import[FactTwo]
@@ -135,7 +135,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     } must throwA[builder.RuleBuildException]
   }
   
-  @Test def exception_thrown_for_arg_with_non_matching_names {
+  @Test def exception_thrown_for_arg_with_non_matching_names() {
     new DroolsPackage {
       Import[FactOne]
       Import[FactTwo]
@@ -149,7 +149,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     } must throwA[builder.RuleBuildException]
   }
 
-  @Test def exception_thrown_for_arg_with_non_matching_type {
+  @Test def exception_thrown_for_arg_with_non_matching_type() {
     new DroolsPackage {
       Import[FactOne]
       Import[FactTwo]
@@ -163,7 +163,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     } must throwA[builder.RuleBuildException]
   }
 
-  @Test def consequence_invoked_when_arg_supertype_of_fact {
+  @Test def consequence_invoked_when_arg_supertype_of_fact() {
     new DroolsPackage {
       Import[FactOneSub]
 
@@ -179,7 +179,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     actual_f1_1 must_== f1s_1
   }
   
-  @Test def exception_thrown_arg_subtype_of_fact { // really same as wrong type
+  @Test def exception_thrown_arg_subtype_of_fact() { // really same as wrong type
     new DroolsPackage {
       Import[FactOne]
 
@@ -191,7 +191,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     } must throwA[builder.RuleBuildException]
   }
 
-  @Test def consequence_invoked_with_special_args {
+  @Test def consequence_invoked_with_special_args() {
     var actual_kh: KnowledgeHelper = null
     var actual_wm: WorkingMemory = null
 
@@ -206,12 +206,14 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
-    actual_kh must notBeNull
-    actual_wm must notBeNull
+    insertAllFactsAndFire()
+    
+    actual_kh must not beNull
+    
+    actual_wm must not beNull
   }
 
-  @Test def consequence_invoked_with_args_and_special_args {
+  @Test def consequence_invoked_with_args_and_special_args() {
     var actual_kh: KnowledgeHelper = null
     var actual_wm: WorkingMemory = null
 
@@ -230,14 +232,16 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     actual_f1_1 must_== f1_1
     actual_f2_1 must_== f2_1
-    actual_kh must notBeNull
-    actual_wm must notBeNull
+
+    actual_kh must not beNull
+
+    actual_wm must not beNull
   }
 
-  @Test def exception_thrown_for_malformed_lhs {
+  @Test def exception_thrown_for_malformed_lhs() {
     new DroolsPackage {
       Import[FactOne]
 
@@ -250,7 +254,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   }
 
   // Really same as mismatch parameter name (wrt implementation)
-  @Test def exception_thrown_for_missing_import {
+  @Test def exception_thrown_for_missing_import() {
     new DroolsPackage {
       Rule("rule") when {"""
         f1_1: FactOne()
@@ -260,7 +264,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     } must throwA[builder.RuleBuildException]
   }
 
-  @Test def globals_added_to_session {
+  @Test def globals_added_to_session() {
     new DroolsPackage {
       Global("factOne" -> new FactOne("f1_1"))
       Rule("rule") when {"""
@@ -274,7 +278,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     g.name must_== "f1_1"
   }
 
-  @Test def package_name_defaults_to_containing_scala_class_package {
+  @Test def package_name_defaults_to_containing_scala_class_package() {
     new DroolsPackage {
       Import[FactOne]
       Rule("rule") when {"""
@@ -288,7 +292,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     builder.knowledgePackages.head.getName must_== this.getClass.getPackage.getName
   }
 
-  @Test def package_named_explicitly {
+  @Test def package_named_explicitly() {
     new DroolsPackage("mypackage") {
       Import[FactOne]
       Rule("rule") when {"""
@@ -302,7 +306,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     builder.knowledgePackages.head.getName must_== "mypackage"
   }
 
-  @Test def multiple_packages_with_different_names {
+  @Test def multiple_packages_with_different_names() {
     new DroolsPackage("mypackage_1") {
       Import[FactOne]
       Rule("rule") when {"""
@@ -328,7 +332,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     }
   }
 
-  @Test def multiple_packages_with_same_name_combine {
+  @Test def multiple_packages_with_same_name_combine() {
     new DroolsPackage("mypackage") {
       Import[FactOne]
       Rule("rule_1") when {"""
@@ -352,7 +356,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   }
 
   // This is the default drools behavior, but it would be nice to get a warning.
-  @Test def rule_with_same_name_overrides_previous {
+  @Test def rule_with_same_name_overrides_previous() {
     var rule1_invoked = false
     var rule2_invoked = false
 
@@ -370,12 +374,12 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     rule1_invoked must_== false
     rule2_invoked must_== true
   }
 
-  @Test def rule_attributes_configured {
+  @Test def rule_attributes_configured() {
     new DroolsPackage {
       Import[FactOne]
 
@@ -407,7 +411,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     rule.isNoLoop must_== true
   }
 
-  @Test def auto_generated_rule_name {
+  @Test def auto_generated_rule_name() {
     var rule1_invoked = false
     var rule2_invoked = false
 
@@ -425,13 +429,13 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     // Don't care what the name is, just that its unique
     rule1_invoked must_== true
     rule2_invoked must_== true
   }
 
-  @Test def multiline_syntax {
+  @Test def multiline_syntax() {
     var rule1_invoked = false
     var rule2_invoked = false
 
@@ -449,11 +453,11 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     rule1_invoked must_== true
   }
 
-  @Test def concise_syntax {
+  @Test def concise_syntax() {
     var rule1_invoked = false
     var rule2_invoked = false
 
@@ -477,12 +481,12 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       }
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     rule1_invoked must_== true
     rule2_invoked must_== true
   }
 
-  @Test def non_inner_rule_syntax {
+  @Test def non_inner_rule_syntax() {
     var rule1_invoked = false
     var rule2_invoked = false
 
@@ -505,12 +509,12 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       rule2_invoked = true
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     rule1_invoked must_== true
     rule2_invoked must_== true
   }
 
-  @Test def non_inner_rule_using_import_syntax {
+  @Test def non_inner_rule_using_import_syntax() {
     var rule1_invoked = false
     var rule2_invoked = false
 
@@ -534,7 +538,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
       rule2_invoked = true
     }
 
-    insertAllFactsAndFire
+    insertAllFactsAndFire()
     rule1_invoked must_== true
     rule2_invoked must_== true
   }
@@ -543,7 +547,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
   // but there is production code that verifies its working. Maybe completely 
   // seperate test is needed...
 
-  @Test def single_package_syntax {
+  @Test def single_package_syntax() {
 
     val p = new DroolsPackage {
 
@@ -560,11 +564,11 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     }
 
     val kp: KnowledgePackage = p.knowledgePackage
-    kp.getRules filter (_.getName == "rule1") must notBeNull
+    kp.getRules filter (_.getName == "rule1") must not beNull
 
   }
 
-  @Test def single_package_subclass_syntax {
+  @Test def single_package_subclass_syntax() {
 
     class MyRules extends DroolsPackage {
 
@@ -581,7 +585,7 @@ class ScalaPackageBuilderSpec extends SpecsMatchers with Mockito {
     }
 
     val kp: KnowledgePackage = (new MyRules).knowledgePackage
-    kp.getRules filter (_.getName == "rule1") must notBeNull
+    kp.getRules filter (_.getName == "rule1") must not beNull
 
   }
 

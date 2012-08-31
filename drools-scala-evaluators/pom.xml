@@ -5,12 +5,12 @@
   <parent>
     <groupId>memelet.drools</groupId>
     <artifactId>drools-scala</artifactId>
-    <version>1.0-RC1</version>
+    <version>1.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>memelet.drools</groupId>
-  <artifactId>drools-scala-evaluators</artifactId>
+  <artifactId>drools-scala-evaluators_${scala-version}</artifactId>
   <packaging>jar</packaging>
   <name>DROOLS Scala Evaluators</name>
 
@@ -21,14 +21,14 @@
 
     <dependency>
       <groupId>memelet.drools</groupId>
-      <artifactId>drools-scala-core</artifactId>
-      <version>${drools.scala.version}</version>
+      <artifactId>drools-scala-core_${scala-version}</artifactId>
+      <version>${drools-scala-version}</version>
     </dependency>
 
     <dependency>
       <groupId>memelet.drools</groupId>
-      <artifactId>drools-scala-core</artifactId>
-      <version>${drools.scala.version}</version>
+      <artifactId>drools-scala-core_${scala-version}</artifactId>
+      <version>${drools-scala-version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>

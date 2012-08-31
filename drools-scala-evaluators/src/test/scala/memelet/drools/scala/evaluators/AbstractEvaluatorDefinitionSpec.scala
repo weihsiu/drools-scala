@@ -1,15 +1,15 @@
 package memelet.drools.scala.evaluators
 
-import org.specs.SpecsMatchers
-import org.specs.mock.Mockito
 import org.drools.base.{FieldFactory, ValueType}
 import org.drools.spi.{Evaluator, FieldValue, InternalReadAccessor}
 import org.drools.rule.Declaration
 import org.drools.rule.VariableRestriction.{ObjectVariableContextEntry, VariableContextEntry}
 import org.drools.base.evaluators.{EvaluatorDefinition, EvaluatorRegistry}
 import org.drools.common.InternalWorkingMemory
+import org.specs2.matcher.JUnitMustMatchers
+import org.specs2.mock.Mockito
 
-abstract class AbstractEvaluatorDefinitionSpec[D <: EvaluatorDefinition](val definition: D) extends SpecsMatchers with Mockito {
+abstract class AbstractEvaluatorDefinitionSpec[D <: EvaluatorDefinition](val definition: D) extends JUnitMustMatchers with Mockito {
 
   val registry = new EvaluatorRegistry
   registry.addEvaluatorDefinition(definition)

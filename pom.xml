@@ -7,7 +7,7 @@
   <artifactId>drools-scala</artifactId>
   <name>DROOLS Scala Language Package</name>
   <packaging>pom</packaging>
-  <version>1.0-RC1</version>
+  <version>1.1</version>
 
   <modules>
     <module>drools-scala-core</module>
@@ -18,29 +18,33 @@
   </modules>
 
   <properties>
-    <drools.scala.version>1.0-SNAPSHOT</drools.scala.version>
+    <drools-scala-version>1.0</drools-scala-version>
 
-    <drools.version>5.1.1</drools.version>
-    <scala.version>2.8.0</scala.version>
+    <drools-version>5.4.0.Final</drools-version>
+    <scala-version>2.9.1</scala-version>
 
-    <joda.time.version>1.6</joda.time.version>
-    <scala.time.artifactId>scala-time_2.8.0</scala.time.artifactId>
-    <scala.time.version>0.2-SI</scala.time.version>
+    <joda-time-version>2.0</joda-time-version>
+    <joda-convert-version>1.1</joda-convert-version>
+    <scala-time-version>0.4-SI</scala-time-version>
+    <!--<joda-time-version>2.0</joda-time-version>-->
+    <!--<joda-convert-version>0.4</joda-convert-version>-->
+    <!--<scala-time-version>0.4-SI</scala-time-version>-->
 
-    <slf4j.version>1.5.8</slf4j.version>
-    <logback.version>0.9.18</logback.version>
+    <slf4j-version>1.6.1</slf4j-version>
+    <logback-version>0.9.29</logback-version>
 
-    <junit.version>4.8.1</junit.version>
-    <mockito.version>1.8.4</mockito.version>
-    <objenesis.version>1.2</objenesis.version>
-    <hamcrest.version>1.1</hamcrest.version>
-    <specs.artifactId>specs_2.8.0</specs.artifactId>
-    <specs.version>1.6.5</specs.version>
-    <scalacheck.artifactId>scalacheck_2.8.0</scalacheck.artifactId>
-    <scalacheck.version>1.7</scalacheck.version>
-    <cglib.version>2.1_3</cglib.version>
+    <junit-version>4.8.1</junit-version>
+    <mockito-version>1.8.5</mockito-version>
+    <objenesis-version>1.2</objenesis-version>
+    <hamcrest-version>1.1</hamcrest-version>
+    <specs2-version>1.5</specs2-version>
+    <!--<specs.artifactId>specs_2.8.0</specs.artifactId>-->
+    <!--<specs.version>1.6.5</specs.version>-->
+    <!--<scalacheck.artifactId>scalacheck_2.8.0</scalacheck.artifactId>-->
+    <!--<scalacheck.version>1.7</scalacheck.version>-->
+    <cglib-version>2.1_3</cglib-version>
 
-    <paranamer.version>2.2.1</paranamer.version>
+    <paranamer-version>2.2.1</paranamer-version>
   </properties>
 
   <dependencyManagement>
@@ -49,19 +53,19 @@
       <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-library</artifactId>
-        <version>${scala.version}</version>
+        <version>${scala-version}</version>
       </dependency>
       <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-compiler</artifactId>
-        <version>${scala.version}</version>
+        <version>${scala-version}</version>
         <scope>compile</scope>
       </dependency>
 
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jcl-over-slf4j</artifactId>
-        <version>${slf4j.version}</version>
+        <version>${slf4j-version}</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -72,47 +76,66 @@
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-core</artifactId>
-        <version>${logback.version}</version>
+        <version>${logback-version}</version>
       </dependency>
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
-        <version>${logback.version}</version>
+        <version>${logback-version}</version>
       </dependency>
 
       <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
-        <version>${joda.time.version}</version>
+        <version>${joda-time-version}</version>
       </dependency>
       <dependency>
+        <groupId>org.joda</groupId>
+        <artifactId>joda-convert</artifactId>
+        <version>${joda-convert-version}</version>
+      </dependency>
+      <!-- This an SI build -->
+      <dependency>
         <groupId>org.scala-tools</groupId>
-        <artifactId>${scala.time.artifactId}</artifactId>
-        <version>${scala.time.version}</version>
+        <artifactId>scala-time_${scala-version}</artifactId>
+        <version>${scala-time-version}</version>
+        <exclusions>
+          <!-- Because we are using joda-time-..-SI -->
+          <exclusion>
+            <artifactId>joda-time</artifactId>
+            <groupId>joda-time</groupId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
         <groupId>org.drools</groupId>
-        <artifactId>drools-api</artifactId>
-        <version>${drools.version}</version>
+        <artifactId>knowledge-api</artifactId>
+        <version>${drools-version}</version>
       </dependency>
       <dependency>
         <groupId>org.drools</groupId>
         <artifactId>drools-core</artifactId>
-        <version>${drools.version}</version>
+        <version>${drools-version}</version>
       </dependency>
       <dependency>
         <groupId>org.drools</groupId>
         <artifactId>drools-compiler</artifactId>
-        <version>${drools.version}</version>
+        <version>${drools-version}</version>
       </dependency>
       <dependency>
         <groupId>org.drools</groupId>
         <artifactId>drools-compiler</artifactId>
-        <version>${drools.version}</version>
+        <version>${drools-version}</version>
       </dependency>
 
-      <!-- These are marked as 'provided' in drools-api. Why? -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>2.4.1</version>
+      </dependency>
+
+      <!-- These are marked as 'provided' in *-api. Why? -->
       <dependency>
         <groupId>javax.xml.bind</groupId>
         <artifactId>jaxb-api</artifactId>
@@ -132,46 +155,40 @@
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib-nodep</artifactId>
-        <version>${cglib.version}</version>
+        <version>${cglib-version}</version>
         <scope>test</scope>
       </dependency>
 
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
+        <version>${junit-version}</version>
         <scope>test</scope>
       </dependency>
 
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>${mockito.version}</version>
+        <version>${mockito-version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
         <artifactId>objenesis</artifactId>
-        <version>${objenesis.version}</version>
+        <version>${objenesis-version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-all</artifactId>
-        <version>${hamcrest.version}</version>
+        <version>${hamcrest-version}</version>
         <scope>test</scope>
       </dependency>
 
       <dependency>
-        <groupId>org.scala-tools.testing</groupId>
-        <artifactId>${specs.artifactId}</artifactId>
-        <version>${specs.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.scala-tools.testing</groupId>
-        <artifactId>${scalacheck.artifactId}</artifactId>
-        <version>${scalacheck.version}</version>
+        <groupId>org.specs2</groupId>
+        <artifactId>specs2_${scala-version}</artifactId>
+        <version>${specs2-version}</version>
         <scope>test</scope>
       </dependency>
 
@@ -199,7 +216,7 @@
       <artifactId>drools-compiler</artifactId>
     </dependency>
 
-    <!-- These are marked as 'provided' in drools-api. Why? -->
+    <!-- These are marked as 'provided' in *-api. Why? -->
     <dependency>
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>
@@ -241,15 +258,15 @@
     </dependency>
 
     <dependency>
-      <groupId>org.scala-tools.testing</groupId>
-      <artifactId>${specs.artifactId}</artifactId>
+      <groupId>org.specs2</groupId>
+      <artifactId>specs2_${scala-version}</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.scala-tools.testing</groupId>
-      <artifactId>${scalacheck.artifactId}</artifactId>
-      <scope>test</scope>
-    </dependency>
+    <!--<dependency>-->
+      <!--<groupId>org.scala-tools.testing</groupId>-->
+      <!--<artifactId>${scalacheck.artifactId}</artifactId>-->
+      <!--<scope>test</scope>-->
+    <!--</dependency>-->
 
   </dependencies>
 
@@ -286,7 +303,7 @@
             </execution>
           </executions>
           <configuration>
-            <scalaVersion>${scala.version}</scalaVersion>
+            <scalaVersion>${scala-version}</scalaVersion>
             <jvmArgs>
               <jvmArg>-Xmx512m</jvmArg>
             </jvmArgs>
@@ -351,7 +368,7 @@
     <profile>
       <id>si-nexus</id>
       <properties>
-        <junit.version>4.8.1-memelet</junit.version>
+        <junit-version>4.8.1-memelet</junit-version>
       </properties>
       <distributionManagement>
         <repository>

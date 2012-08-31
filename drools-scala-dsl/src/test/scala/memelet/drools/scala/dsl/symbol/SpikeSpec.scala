@@ -1,8 +1,6 @@
 package memelet.drools.scala
 package dsl.symbol
 
-import org.specs.SpecsMatchers
-import org.specs.mock.Mockito
 import org.drools.rule.VariableRestriction.{ObjectVariableContextEntry, VariableContextEntry}
 import org.drools.base.evaluators.{EvaluatorDefinition, EvaluatorRegistry}
 import org.drools.rule._
@@ -17,17 +15,19 @@ import org.drools.reteoo.{LeftTuple, ReteooStatefulSession, ReteooBuilder, Reteo
 import org.drools.common.{InternalFactHandle, InternalRuleBase, InternalWorkingMemory}
 import util.DynamicVariable
 import org.junit.{Ignore, Test}
+import org.specs2.matcher.JUnitMustMatchers
+import org.specs2.mock.Mockito
 
 case class FactOneX(name: String)
 case class FactTwoX(name: String, f: FactOneX)
 
-class SpikeSpec extends SpecsMatchers with Mockito {
+class SpikeSpec extends JUnitMustMatchers with Mockito {
 
   val classFieldAccessorStore = new ClassFieldAccessorStore
   classFieldAccessorStore.setClassFieldAccessorCache(new ClassFieldAccessorCache(this.getClass.getClassLoader))
   val evaluatorRegistry = new EvaluatorRegistry
 
-  
+
   class DslPackage(name: String) {
     val underlying = new Package(name)
   }
@@ -169,7 +169,7 @@ class SpikeSpec extends SpecsMatchers with Mockito {
     }
   }
   //-----------------------------------------------------
-  
+
 //  class RuleW extends DslRule ("ruleW") {
 //    val r1 = FactOne when {f=> f.name ~== "f1_1"}
 //    val rz = when[FactOne](f1 => f1.name ~== r1.name)
